@@ -1,0 +1,917 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { paymentAPI, profileAPI, orderAPI } from '../utils/api';
+import { loadScript } from '../utils/razorpay';
+import { Check, Package, FileText } from 'lucide-react';
+import Invoice from '../components/Invoice';
+
+const Checkout = () => {
+  const { cart, getCartTotal, clearCart } = useCart();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [error, setError] = useState('');
+  const [addressSaved, setAddressSaved] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'razorpay' or 'COD'
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false); // Prevent cart redirect during order placement
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false); // Show processing state
+  const [processingStep, setProcessingStep] = useState(0); // Track processing steps
+  const [orderData, setOrderData] = useState(null); // Store order data for success page
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false); // Show invoice preview
+  const [shippingAddress, setShippingAddress] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    address: user?.address?.address || '',
+    city: user?.address?.city || '',
+    state: user?.address?.state || '',
+    zipCode: user?.address?.zipCode || '',
+    country: user?.address?.country || 'India',
+  });
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    // Don't redirect to cart if we're in the process of placing an order
+    if (cart.length === 0 && !isPlacingOrder) {
+      navigate('/cart');
+      return;
+    }
+    
+    // Load user profile to get saved address
+    const loadUserProfile = async () => {
+      try {
+        const response = await profileAPI.getProfile();
+        if (response.success && response.data.user) {
+          const userData = response.data.user;
+          // Update shipping address with saved address if available
+          if (userData.address) {
+            setShippingAddress({
+              name: userData.address.name || userData.name || '',
+              phone: userData.address.phone || userData.phone || '',
+              address: userData.address.address || '',
+              city: userData.address.city || '',
+              state: userData.address.state || '',
+              zipCode: userData.address.zipCode || '',
+              country: userData.address.country || 'India',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+    
+    loadUserProfile();
+  }, [isAuthenticated, cart.length, navigate, isPlacingOrder]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setShippingAddress((prev) => ({ ...prev, [name]: value }));
+    // Reset saved status when user edits
+    if (addressSaved) {
+      setAddressSaved(false);
+    }
+  };
+
+  const saveAddress = async () => {
+    if (!shippingAddress.name || !shippingAddress.phone || !shippingAddress.address || !shippingAddress.city) {
+      setError('Please fill in all required fields before saving');
+      return;
+    }
+
+    setSavingAddress(true);
+    setError('');
+
+    try {
+      const addressData = {
+        name: shippingAddress.name,
+        phone: shippingAddress.phone,
+        address: {
+          name: shippingAddress.name,
+          phone: shippingAddress.phone,
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          state: shippingAddress.state || '',
+          zipCode: shippingAddress.zipCode || '',
+          country: shippingAddress.country || 'India',
+        },
+      };
+
+      const response = await profileAPI.updateProfile(addressData);
+      if (response.success) {
+        setAddressSaved(true);
+        setTimeout(() => setAddressSaved(false), 3000);
+        // Update user in AuthContext if available
+        if (response.data?.user) {
+          // The user data will be refreshed on next profile load
+        }
+      } else {
+        setError('Failed to save address. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error saving address:', err);
+      setError('Failed to save address. Please try again.');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!shippingAddress.name || !shippingAddress.phone || !shippingAddress.address || !shippingAddress.city) {
+      setError('Please fill in all required shipping address fields');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Save address automatically before proceeding to payment
+      try {
+        const addressData = {
+          name: shippingAddress.name,
+          phone: shippingAddress.phone,
+          address: {
+            name: shippingAddress.name,
+            phone: shippingAddress.phone,
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            state: shippingAddress.state || '',
+            zipCode: shippingAddress.zipCode || '',
+            country: shippingAddress.country || 'India',
+          },
+        };
+        await profileAPI.updateProfile(addressData);
+      } catch (saveErr) {
+        console.error('Error auto-saving address:', saveErr);
+        // Continue with payment even if address save fails
+      }
+
+      // Handle Cash on Delivery
+      if (paymentMethod === 'COD') {
+        // Set flag to prevent cart redirect
+        setIsPlacingOrder(true);
+        setIsProcessingOrder(true);
+        setLoading(true);
+        setProcessingStep(0);
+        
+        // Step 1: Validating order details (2 seconds)
+        setProcessingStep(1);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Step 2: Processing payment method (6 seconds)
+        setProcessingStep(2);
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        
+        // Step 3: Confirming order (5 seconds)
+        setProcessingStep(3);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Step 4: Creating order (3 seconds delay before API call, then API call)
+        setProcessingStep(4);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const response = await orderAPI.createOrder(shippingAddress, 'COD');
+        
+        if (response.success) {
+          // Store order data
+          setOrderData(response.data?.order);
+          
+          // Step 5: Order confirmed (2 seconds)
+          setProcessingStep(5);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          setIsProcessingOrder(false);
+          setLoading(false);
+          setShowSuccessModal(true);
+          // Clear cart after showing modal to prevent redirect
+          clearCart();
+          // Store order total in localStorage for success page
+          const orderTotal = getCartTotal();
+          localStorage.setItem('lastOrderTotal', orderTotal.toString());
+          
+          // Navigate to success page after showing the modal with smooth transition
+          setTimeout(() => {
+            setShowSuccessModal(false);
+            // Small delay for modal fade out
+            setTimeout(() => {
+              const orderId = response.data?.order?._id || response.data?.order?.id;
+              navigate(`/order-success?method=COD&orderId=${orderId || ''}`);
+            }, 300);
+          }, 2500);
+        } else {
+          setIsPlacingOrder(false);
+          setIsProcessingOrder(false);
+          setLoading(false);
+          setProcessingStep(0);
+          throw new Error(response.message || 'Failed to create order');
+        }
+        return;
+      }
+
+      // Handle Razorpay payment
+      // Load Razorpay script
+      const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      
+      if (!scriptLoaded) {
+        throw new Error('Failed to load payment gateway. Please refresh the page and try again.');
+      }
+
+      if (!window.Razorpay) {
+        throw new Error('Payment gateway is not available. Please refresh the page and try again.');
+      }
+
+      // Create Razorpay order
+      const response = await paymentAPI.createRazorpayOrder(shippingAddress);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create payment order');
+      }
+
+      const { orderId, amount, currency, key } = response.data;
+
+      // Razorpay options
+      const options = {
+        key: key,
+        amount: amount,
+        currency: currency,
+        name: 'StyleTrending',
+        description: `Order for ${cart.length} item(s)`,
+        order_id: orderId,
+        handler: async function (response) {
+          try {
+            // Verify payment
+            const verifyResponse = await paymentAPI.verifyPayment(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+
+            if (verifyResponse.success) {
+              clearCart();
+              navigate('/profile?tab=orders&payment=success');
+            } else {
+              setError('Payment verification failed. Please contact support.');
+            }
+          } catch (err) {
+            console.error('Payment verification error:', err);
+            setError('Payment verification failed. Please contact support.');
+          } finally {
+            setLoading(false);
+          }
+        },
+        prefill: {
+          name: shippingAddress.name,
+          email: user?.email || '',
+          contact: shippingAddress.phone,
+        },
+        notes: {
+          address: `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.state}`,
+        },
+        theme: {
+          color: '#000000',
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(false);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.on('payment.failed', function (response) {
+        setError(`Payment failed: ${response.error.description}`);
+        setLoading(false);
+        setIsPlacingOrder(false); // Reset flag on payment failure
+      });
+      razorpay.open();
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError(err.message || 'Failed to initiate payment. Please try again.');
+      setLoading(false);
+      setIsPlacingOrder(false); // Reset flag on error
+    }
+  };
+
+  // Don't return null if we're placing an order (to show the modal)
+  if (!isAuthenticated || (cart.length === 0 && !isPlacingOrder)) {
+    return null;
+  }
+
+  return (
+    <div 
+      className="min-h-screen bg-gray-50 transition-opacity duration-300 overflow-x-hidden"
+      style={{
+        opacity: showSuccessModal ? 0.3 : 1,
+        pointerEvents: showSuccessModal ? 'none' : 'auto',
+        animation: 'fadeInPage 0.4s ease-out'
+      }}
+    >
+      {/* Professional Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm overflow-x-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-semibold text-gray-900 truncate">Checkout</h1>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{cart.length} {cart.length === 1 ? 'item' : 'items'}</p>
+          </div>
+          <button
+            onClick={() => navigate('/cart')}
+            className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 font-medium flex-shrink-0"
+          >
+            ← Back to Cart
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 overflow-x-hidden">
+
+        {/* Success Modal with Smooth Animations */}
+        {showSuccessModal && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
+            style={{
+              animation: 'fadeIn 0.3s ease-out'
+            }}
+            onClick={(e) => {
+              // Prevent closing on background click during redirect
+              e.stopPropagation();
+            }}
+          >
+            <div 
+              className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center transform transition-all duration-300"
+              style={{
+                animation: 'slideUp 0.4s ease-out'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center mb-4">
+                <div 
+                  className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center transform transition-all duration-500"
+                  style={{
+                    animation: 'scaleIn 0.5s ease-out, pulse 2s ease-in-out infinite'
+                  }}
+                >
+                  <Check 
+                    className="w-12 h-12 text-green-600 transform transition-all duration-500"
+                    style={{
+                      animation: 'checkmark 0.6s ease-out 0.3s both'
+                    }}
+                  />
+                </div>
+              </div>
+              <h2 
+                className="text-2xl font-bold text-gray-900 mb-2 transform transition-all duration-500"
+                style={{
+                  animation: 'fadeInUp 0.5s ease-out 0.2s both'
+                }}
+              >
+                Order Placed Successfully!
+              </h2>
+              <p 
+                className="text-gray-600 mb-6 transform transition-all duration-500"
+                style={{
+                  animation: 'fadeInUp 0.5s ease-out 0.3s both'
+                }}
+              >
+                Your order has been confirmed. Redirecting to order details...
+              </p>
+              <div className="flex justify-center">
+                <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add CSS animations */}
+        <style>{`
+          @keyframes fadeInPage {
+            from { 
+              opacity: 0;
+            }
+            to { 
+              opacity: 1;
+            }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { 
+              opacity: 0;
+              transform: translateY(20px) scale(0.95);
+            }
+            to { 
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+          @keyframes scaleIn {
+            from { 
+              transform: scale(0);
+              opacity: 0;
+            }
+            to { 
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+          }
+          @keyframes checkmark {
+            0% { 
+              transform: scale(0) rotate(-45deg);
+              opacity: 0;
+            }
+            50% { 
+              transform: scale(1.2) rotate(5deg);
+            }
+            100% { 
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
+          }
+          @keyframes fadeInUp {
+            from { 
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to { 
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Enhanced Processing Order Overlay with Steps */}
+        {isProcessingOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 overflow-y-auto max-h-[90vh]">
+              <div className="text-center">
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <div className="w-20 h-20 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">{processingStep}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Placing Your Order</h3>
+                <p className="text-sm text-gray-600 mb-6">Please wait while we process your order...</p>
+                
+                {/* Processing Steps */}
+                <div className="space-y-3 text-left">
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    processingStep >= 1 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      processingStep >= 1 ? 'bg-green-600' : 'bg-gray-300'
+                    }`}>
+                      {processingStep > 1 ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : processingStep === 1 ? (
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      processingStep >= 1 ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      Validating order details
+                    </span>
+                  </div>
+                  
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    processingStep >= 2 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      processingStep >= 2 ? 'bg-green-600' : 'bg-gray-300'
+                    }`}>
+                      {processingStep > 2 ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : processingStep === 2 ? (
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      processingStep >= 2 ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      Processing payment method
+                    </span>
+                  </div>
+                  
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    processingStep >= 3 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      processingStep >= 3 ? 'bg-green-600' : 'bg-gray-300'
+                    }`}>
+                      {processingStep > 3 ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : processingStep === 3 ? (
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      processingStep >= 3 ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      Confirming order
+                    </span>
+                  </div>
+                  
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    processingStep >= 4 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      processingStep >= 4 ? 'bg-green-600' : 'bg-gray-300'
+                    }`}>
+                      {processingStep > 4 ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : processingStep === 4 ? (
+                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                      ) : (
+                        <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      processingStep >= 4 ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      Creating order
+                    </span>
+                  </div>
+                  
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    processingStep >= 5 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      processingStep >= 5 ? 'bg-green-600' : 'bg-gray-300'
+                    }`}>
+                      {processingStep >= 5 ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      processingStep >= 5 ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
+                      Order confirmed
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          {/* Left Column - Shipping Address Form */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+            {/* Shipping Address Card */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-gray-900">Shipping Address</h2>
+                  {addressSaved && (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded">
+                      <Check size={12} />
+                      <span>Saved</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={shippingAddress.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={shippingAddress.phone}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="address"
+                    value={shippingAddress.address}
+                    onChange={handleInputChange}
+                    required
+                    rows="3"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors resize-none"
+                    placeholder="Enter your complete address"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={shippingAddress.city}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">State</label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={shippingAddress.state}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                      placeholder="State"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">ZIP Code</label>
+                    <input
+                      type="text"
+                      name="zipCode"
+                      value={shippingAddress.zipCode}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                      placeholder="ZIP Code"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={shippingAddress.country}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                      placeholder="Country"
+                    />
+                  </div>
+                </div>
+                
+                {/* Save Address Button */}
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={saveAddress}
+                    disabled={savingAddress || !shippingAddress.name || !shippingAddress.phone || !shippingAddress.address || !shippingAddress.city}
+                    className="w-full px-4 py-2 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-gray-200"
+                  >
+                    {savingAddress ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        Save Address
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-24 overflow-hidden">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <h2 className="text-base font-semibold text-gray-900">Order Summary</h2>
+              </div>
+              <div className="p-4 sm:p-6 space-y-4 max-h-64 overflow-y-auto">
+                {cart.map((item) => {
+                  const product = item.product || item;
+                  const price = product.price || product.finalPrice || 0;
+                  return (
+                    <div key={item._id || item.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                      {product.images?.[0] && (
+                        <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200">
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="text-sm font-medium text-gray-900 break-words">{product.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                          ₹{(price * item.quantity).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 space-y-2.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium text-gray-900">₹{getCartTotal().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium text-green-600">Free</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
+                  <span className="text-base font-semibold text-gray-900">Total</span>
+                  <span className="text-lg font-semibold text-gray-900">₹{getCartTotal().toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
+                <div className="space-y-2.5">
+                  {/* <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                    paymentMethod === 'razorpay' 
+                      ? 'border-gray-900 bg-gray-50' 
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}> */}
+                    {/* <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
+                    /> */}
+                    {/* <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">Online Payment</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Wallets</div>
+                    </div> */}
+                  {/* </label> */}
+                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                    paymentMethod === 'COD' 
+                      ? 'border-gray-900 bg-gray-50' 
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="COD"
+                      checked={paymentMethod === 'COD'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 break-words">Cash on Delivery</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Pay on delivery</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Payment Button */}
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-white">
+                <button
+                  onClick={handlePayment}
+                  disabled={loading || isProcessingOrder}
+                  className="w-full bg-gray-900 text-white py-2.5 rounded-md hover:bg-gray-800 transition-colors text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading || isProcessingOrder ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>{isProcessingOrder ? 'Placing Order...' : 'Processing...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      {paymentMethod === 'COD' ? (
+                        <>
+                          <Package className="w-4 h-4" />
+                          <span>Place Order</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          <span>Pay Now</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-gray-500 mt-3 text-center">
+                  By placing your order, you agree to our Terms & Conditions
+                </p>
+                {/* <button
+                  onClick={() => setShowInvoicePreview(true)}
+                  className="w-full mt-3 bg-white text-gray-700 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Preview Invoice
+                </button> */}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Preview Modal */}
+      {showInvoicePreview && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto" onClick={() => setShowInvoicePreview(false)}>
+          <div className="bg-white rounded-lg max-w-4xl w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto overflow-x-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Invoice Preview</h2>
+              <button
+                onClick={() => setShowInvoicePreview(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <Invoice 
+                order={{
+                  items: cart.map(item => ({
+                    product: item.product || item,
+                    quantity: item.quantity,
+                    size: item.size || '',
+                    color: item.color || '',
+                    price: (item.product || item).price || (item.product || item).finalPrice || 0,
+                  })),
+                  totalAmount: getCartTotal(),
+                  shippingAddress: shippingAddress,
+                  paymentMethod: paymentMethod,
+                  orderDate: new Date(),
+                  status: 'pending',
+                }} 
+                user={user}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Checkout;
+
