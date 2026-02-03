@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 // import Footer from '../components/Footer'; 
 import ProductCard from '../components/ProductCard';
-import { productAPI, categoryAPI } from '../utils/api';
+import { productAPI } from '../utils/api';
 import { handleImageError } from '../utils/imageFallback';
 
 // --- ICONS (Embedded directly so no install needed) ---
@@ -95,20 +95,6 @@ const fetchAccessories = async () => {
     return [];
   }
 };  
-
-// Path helpers for dynamic categories (matches Navbar & App routes)
-const getCategoryPath = (cat) => {
-  const v = (cat?.value || '').toLowerCase();
-  if (v === 'lens') return '/lenses';
-  if (v === 'saree') return '/women/saree';
-  return `/${v}`;
-};
-const getSubcategoryPath = (cat, sub) => {
-  const base = getCategoryPath(cat);
-  const v = (cat?.value || '').toLowerCase();
-  if (v === 'men' || v === 'women') return `${base}/${sub.value}`;
-  return `${base}?subCategory=${sub.value}`;
-};
 
 const LuxeSection = () => {
   const scrollRef = useRef(null);
@@ -205,15 +191,13 @@ const Home = () => {
   const [womenItems, setWomenItems] = useState([]);
   const [watches, setWatches] = useState([]);
   const [accessories, setAccessories] = useState([]);
-  const [homeCategories, setHomeCategories] = useState([]);
 
   useEffect(() => {
     const loadAllData = async () => {
       setIsLoading(true);
       try {
-        const [freshDropsData, saleData, menData, womenData, watchesData, accessoriesData, categoriesRes] = await Promise.all([
-          fetchFreshDrops(), fetchSaleItems(), fetchMen(), fetchWomen(), fetchWatches(), fetchAccessories(),
-          categoryAPI.getCategories().catch(() => ({ success: false }))
+        const [freshDropsData, saleData, menData, womenData, watchesData, accessoriesData] = await Promise.all([
+          fetchFreshDrops(), fetchSaleItems(), fetchMen(), fetchWomen(), fetchWatches(), fetchAccessories()
         ]);
         setFreshDrops(freshDropsData);
         setSaleItems(saleData);
@@ -221,9 +205,6 @@ const Home = () => {
         setWomenItems(womenData);
         setWatches(watchesData);
         setAccessories(accessoriesData);
-        if (categoriesRes?.success && categoriesRes?.data?.categories) {
-          setHomeCategories(categoriesRes.data.categories);
-        }
       } catch (error) {
         console.error("Error loading home page data:", error);
       } finally {
@@ -375,7 +356,7 @@ const Home = () => {
         </div>
       </section> */}
 
-      {/* --- PRODUCT CATEGORIES (Dynamic from database) --- */}
+      {/* --- PRODUCT CATEGORIES (Men's / Women's Watches, Wallet, Belt) --- */}
       <section className="py-12 md:py-16 mb-20 bg-stone-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
@@ -383,38 +364,31 @@ const Home = () => {
           </h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
-            {homeCategories.length === 0 ? (
-              <p className="col-span-full text-center text-gray-500 py-8">No categories yet. Add them from Admin.</p>
-            ) : (
-              homeCategories.flatMap((cat) => {
-                const basePath = getCategoryPath(cat);
-                const items = [{ label: cat.name, path: basePath }];
-                (cat.subcategories || []).forEach((sub) => {
-                  items.push({
-                    label: sub.name,
-                    path: getSubcategoryPath(cat, sub),
-                  });
-                });
-                return items;
-              }).map((item, idx) => (
-                <Link
-                  key={`${item.path}-${idx}`}
-                  to={item.path}
-                  className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
-                >
-                  <div className="aspect-square overflow-hidden rounded-2xl bg-gray-100 flex items-center justify-center">
-                    <img
-                      src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191651/photo-1524592094714-0f0654e20314_dv6fdz.avif"
-                      alt={item.label}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <p className="text-center font-semibold text-gray-800 mt-3 mb-2 text-sm md:text-base">
-                    {item.label}
-                  </p>
-                </Link>
-              ))
-            )}
+            {[
+              { label: "Men's Watches", path: '/watches?gender=men', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191651/photo-1524592094714-0f0654e20314_dv6fdz.avif' },
+              { label: "Women's Watches", path: '/watches?gender=women', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191651/photo-1524592094714-0f0654e20314_dv6fdz.avif' },
+              { label: "Men's Wallet", path: '/accessories?gender=men&subCategory=wallet', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765192028/1_08426779-951c-47b7-9feb-ef29ca85b27c_frapuz.webp' },
+              { label: "Women's Wallet", path: '/accessories?gender=women&subCategory=wallet', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191722/c037121844264e7d40ffc2bb11335a21_vadndt.jpg' },
+              { label: "Men's Belt", path: '/accessories?gender=men&subCategory=belt', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191618/photo-1515562141207-7a88fb7ce338_k4onlv.avif' },
+              { label: "Women's Belt", path: '/accessories?gender=women&subCategory=belt', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191618/photo-1515562141207-7a88fb7ce338_k4onlv.avif' }
+            ].map((cat) => (
+              <Link
+                key={cat.path}
+                to={cat.path}
+                className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+              >
+                <div className="aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                  <img
+                    src={cat.image}
+                    alt={cat.label}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <p className="text-center font-semibold text-gray-800 mt-3 mb-2 text-sm md:text-base">
+                  {cat.label}
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

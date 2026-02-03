@@ -200,6 +200,11 @@ export const profileAPI = {
   },
 };
 
+// Categories API (public - for nav)
+export const categoriesAPI = {
+  getCategories: async () => apiRequest('/categories'),
+};
+
 // Product API calls
 export const productAPI = {
   getWatches: async (params = {}) => {
@@ -324,15 +329,6 @@ export const adminAPI = {
     }),
   deleteCategory: async (id) =>
     apiRequest(`/admin/categories/${id}`, { method: 'DELETE' }),
-  addSubcategory: async (categoryId, payload) =>
-    apiRequest(`/admin/categories/${categoryId}/subcategories`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  removeSubcategory: async (categoryId, subId) =>
-    apiRequest(`/admin/categories/${categoryId}/subcategories/${subId}`, {
-      method: 'DELETE',
-    }),
 };
 
 // Review API calls
@@ -377,11 +373,6 @@ export const wishlistAPI = {
   checkWishlist: async (productId) => {
     return apiRequest(`/wishlist/check/${productId}`);
   },
-};
-
-// Public categories (for navbar - no auth required)
-export const categoryAPI = {
-  getCategories: async () => apiRequest('/categories'),
 };
 
 // Search API calls

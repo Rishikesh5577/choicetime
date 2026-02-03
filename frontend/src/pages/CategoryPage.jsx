@@ -33,6 +33,8 @@ const CategoryPage = () => {
   const genderFromPath = pathSegments[0] === 'men' ? 'men' : pathSegments[0] === 'women' ? 'women' : null;
   const derivedGender = (gender ? gender.toLowerCase() : null) || genderFromPath;
   const derivedCategory = category || pathSegments[1] || null;
+  const urlParams = new URLSearchParams(location.search || '');
+  const subCategoryFromQuery = urlParams.get('subCategory')?.trim() || null;
 
   // 1. Initial Data Fetch
   useEffect(() => {
@@ -50,7 +52,16 @@ const CategoryPage = () => {
   useEffect(() => {
     let filtered = [...allProducts];
 
-    // Subcategory Filtering
+    // Subcategory from URL for /watches and /accessories (e.g. ?subCategory=analog)
+    if ((pathname === '/watches' || pathname === '/accessories') && subCategoryFromQuery) {
+      const expected = subCategoryFromQuery.toLowerCase().trim().replace(/-/g, '');
+      filtered = filtered.filter(product => {
+        const productSub = (product.subCategory || product.subcategory || '').toLowerCase().trim().replace(/-/g, '');
+        return productSub === expected;
+      });
+    }
+
+    // Subcategory Filtering for /men/:category and /women/:category
     if (derivedGender && derivedCategory) {
       const categoryMap = {
         'shirt': { subCategory: 'shirt', displayName: 'Shirt' },
@@ -120,7 +131,7 @@ const CategoryPage = () => {
 
     setFilteredList(filtered);
     setPage(1); // Reset to page 1 when filters change
-  }, [allProducts, filters, derivedGender, derivedCategory]);
+  }, [allProducts, filters, derivedGender, derivedCategory, pathname, subCategoryFromQuery]);
 
   // Reset to page 1 when filter visibility changes (items per page changes)
   useEffect(() => {

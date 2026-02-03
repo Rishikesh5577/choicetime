@@ -2,42 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { categoryAPI } from '../utils/api';
-
-// Build path from category value (matches App.jsx routes)
-const getCategoryPath = (cat) => {
-  const v = (cat?.value || '').toLowerCase();
-  if (v === 'lens') return '/lenses';
-  if (v === 'saree') return '/women/saree';
-  return `/${v}`;
-};
-
-// Build subcategory path
-const getSubcategoryPath = (cat, sub) => {
-  const base = getCategoryPath(cat);
-  const v = (cat?.value || '').toLowerCase();
-  if (v === 'men' || v === 'women') return `${base}/${sub.value}`;
-  return `${base}?subCategory=${sub.value}`;
-};
-
-// Convert DB categories to nav link format
-const buildNavLinks = (categories) => {
-  if (!Array.isArray(categories) || categories.length === 0) return [];
-  return categories.map((cat) => {
-    const basePath = getCategoryPath(cat);
-    const subs = (cat.subcategories || []).map((sub) => ({
-      name: sub.name,
-      path: getSubcategoryPath(cat, sub),
-    }));
-    const subItems = subs.length > 0 ? [{ name: 'View All', path: basePath }, ...subs] : [];
-    return {
-      id: cat._id || cat.value,
-      label: cat.name,
-      path: basePath,
-      subItems,
-    };
-  });
-};
+import { categoriesAPI } from '../utils/api';
 
 const Navbar = () => {
   // Context
@@ -49,7 +14,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   
   // States
-  const [navLinks, setNavLinks] = useState([]); // Categories from database
+  const [navLinks, setNavLinks] = useState([]);
   const [activeCategory, setActiveCategory] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -65,16 +30,16 @@ const Navbar = () => {
 
   // --- EFFECTS ---
 
-  // Fetch categories from database on mount
+  // Fetch nav categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await categoryAPI.getCategories();
-        if (res?.success && res?.data?.categories) {
-          setNavLinks(buildNavLinks(res.data.categories));
+        const res = await categoriesAPI.getCategories();
+        if (res.success && res.data?.categories?.length) {
+          setNavLinks(res.data.categories);
         }
       } catch (err) {
-        console.error('Failed to fetch categories:', err);
+        console.error('Failed to load nav categories:', err);
       }
     };
     fetchCategories();
@@ -88,11 +53,13 @@ const Navbar = () => {
     
     if (path === '/') setActiveCategory('home');
     else if (path.includes('/sale')) setActiveCategory('sale');
-    else {
+    else if (navLinks.length) {
       const foundLink = navLinks.find(link => 
-        pathAndSearch === link.path || pathAndSearch.startsWith(link.path + '&') || pathAndSearch.startsWith(link.path + '/')
+        pathAndSearch === link.path || pathAndSearch.startsWith(link.path + '&')
       );
       setActiveCategory(foundLink ? foundLink.id : '');
+    } else {
+      setActiveCategory('');
     }
     
     // Close menus on route change
@@ -321,9 +288,6 @@ const Navbar = () => {
                             {sub.name}
                           </Link>
                         ))}
-                        <Link to={link.path} className="mt-2 pt-2 border-t border-gray-100 block text-xs font-semibold text-black hover:underline">
-                          View All →
-                        </Link>
                       </div>
                     </div>
                   )}
@@ -465,7 +429,6 @@ const Navbar = () => {
                               {sub.name}
                             </Link>
                          ))}
-                         <Link to={link.path} onClick={() => setIsMobileMenuOpen(false)} className="block text-sm font-bold text-black pt-2">Shop All</Link>
                        </div>
                     </div>
                   </div>

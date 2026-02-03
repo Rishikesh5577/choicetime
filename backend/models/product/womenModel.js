@@ -24,11 +24,11 @@ const womenSchema = new mongoose.Schema({
     immutable: true,
   },
 
-  // SUBCATEGORIES FOR WOMEN (dynamic - managed via admin)
+  // SUBCATEGORIES FOR WOMEN (same options)
   subCategory: {
     type: String,
+    enum: ['shirt', 'tshirt', 'jeans', 'trousers'],
     required: true,
-    trim: true,
   },
 
   gender: {

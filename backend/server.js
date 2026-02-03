@@ -98,7 +98,6 @@ app.listen(PORT, () => {
   console.log('   ✓ /api/auth');
   console.log('   ✓ /api/products/*');
   console.log('   ✓ /api/admin');
-  console.log('   ✓ /api/categories');
   console.log('   ✓ /api/cart');
   console.log('   ✓ /api/orders');
   console.log('   ✓ /api/profile');

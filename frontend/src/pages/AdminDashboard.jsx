@@ -3,10 +3,25 @@ import { Link } from 'react-router-dom';
 import { adminAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
+const categoryOptions = [
+  { label: 'Men', value: 'men' },
+  { label: 'Women', value: 'women' },
+  { label: 'Saree', value: 'saree' },
+  { label: 'Watches', value: 'watches' },
+  { label: 'Lens', value: 'lens' },
+  { label: 'Accessories', value: 'accessories' },
+];
+
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
-// Auto-generate value (slug) from name
-const nameToValue = (name) => (name || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+// Subcategory options based on category
+const subCategoryOptions = {
+  men: ['shirt', 'tshirt', 'jeans', 'trousers', 'shoes'],
+  women: ['shirt', 'tshirt', 'jeans', 'trousers', 'saree', 'shoes'],
+  watches: ['analog', 'digital', 'smartwatch', 'sports', 'luxury'],
+  lens: ['reading', 'sunglasses', 'computer', 'blue-light', 'progressive'],
+  accessories: ['belt', 'wallet', 'bag', 'cap', 'watch-strap'],
+};
 
 // SVG Icons
 const IconDashboard = (props) => (
@@ -70,7 +85,7 @@ const menuItems = [
   { id: 'add-product', label: 'Add Product', icon: IconAdd },
   { id: 'edit-product', label: 'Edit Product', icon: IconEdit },
   { id: 'delete-product', label: 'Delete Product', icon: IconDelete },
-  { id: 'categories', label: 'Manage Categories', icon: IconCategories },
+  { id: 'categories', label: 'Nav Categories', icon: IconCategories },
   { id: 'orders', label: 'Manage Orders', icon: IconOrders },
   { id: 'order-status', label: 'Order Status', icon: IconStatus },
   { id: 'users', label: 'Manage Users', icon: IconUsers },
@@ -107,41 +122,19 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [categories, setCategories] = useState([]);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryValue, setNewCategoryValue] = useState('');
-  const [newCategorySubcategories, setNewCategorySubcategories] = useState(''); // "Name, value" per line
-  const [editingCategory, setEditingCategory] = useState(null); // { id, name, value }
-  const [editingSubcategory, setEditingSubcategory] = useState(null); // { catId, subId, name, value }
-  const [addingSubTo, setAddingSubTo] = useState(null); // { catId, name, value }
+  const [navCategories, setNavCategories] = useState([]);
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    slug: '',
+    productType: 'watches',
+    gender: '',
+    subCategory: '',
+    order: 0,
+  });
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [subItemInputs, setSubItemInputs] = useState([{ name: '', subCategory: '' }]);
 
   const isAdmin = user?.isAdmin;
-
-  const categoryOptions = useMemo(() =>
-    categories.map((c) => ({ label: c.name, value: c.value })),
-    [categories]
-  );
-  const subCategoryOptions = useMemo(() =>
-    Object.fromEntries(
-      categories.map((c) => [
-        c.value,
-        (c.subcategories || []).map((s) => s.value),
-      ])
-    ),
-    [categories]
-  );
-
-  const fetchCategories = async () => {
-    try {
-      const response = await adminAPI.getCategories();
-      if (response.success) {
-        setCategories(response.data.categories || []);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to fetch categories' });
-    }
-  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -156,16 +149,10 @@ const AdminDashboard = () => {
     if (activeSection === 'users') {
       fetchUsers();
     }
-    if (activeSection === 'categories' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'products' || activeSection === 'delete-product') {
-      fetchCategories();
+    if (activeSection === 'categories') {
+      fetchNavCategories();
     }
   }, [isAdmin, activeSection, productCategory]);
-
-  useEffect(() => {
-    if (categories.length > 0 && !categories.some((c) => c.value === productCategory)) {
-      setProductCategory(categories[0].value);
-    }
-  }, [categories]);
 
   const fetchSummary = async () => {
     try {
@@ -215,6 +202,145 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: error.message || 'Failed to fetch users' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNavCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getCategories();
+      if (response.success) {
+        setNavCategories(response.data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to fetch categories' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const productTypeOptions = [
+    { value: 'watches', label: 'Watches' },
+    { value: 'accessories', label: 'Accessories' },
+    { value: 'men', label: 'Men' },
+    { value: 'women', label: 'Women' },
+  ];
+
+  const resetCategoryForm = () => {
+    setCategoryForm({
+      name: '',
+      slug: '',
+      productType: 'watches',
+      gender: '',
+      subCategory: '',
+      order: navCategories.length,
+    });
+    setSubItemInputs([{ name: '', subCategory: '' }]);
+    setEditingCategory(null);
+  };
+
+  // Parse query from path (e.g. /watches?gender=men&subCategory=analog)
+  const getParamsFromPath = (path) => {
+    if (!path || !path.includes('?')) return { gender: '', subCategory: '' };
+    const q = path.split('?')[1] || '';
+    const p = new URLSearchParams(q);
+    return { gender: p.get('gender') || '', subCategory: p.get('subCategory') || '' };
+  };
+  const getSubCategoryFromPath = (path) => getParamsFromPath(path).subCategory;
+
+  const handleCategoryFormChange = (e) => {
+    const { name, value } = e.target;
+    setCategoryForm((prev) => ({ ...prev, [name]: value }));
+    if (name === 'name' && !editingCategory) {
+      const slug = value.trim().toLowerCase().replace(/\s+/g, '-');
+      setCategoryForm((prev) => ({ ...prev, slug }));
+    }
+  };
+
+  const handleAddSubItemRow = () => {
+    setSubItemInputs((prev) => [...prev, { name: '', subCategory: '' }]);
+  };
+
+  const handleSubItemChange = (index, field, value) => {
+    setSubItemInputs((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleRemoveSubItem = (index) => {
+    setSubItemInputs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    const subItems = subItemInputs
+      .filter((s) => s.name.trim())
+      .map((s) => ({ name: s.name.trim(), subCategory: (s.subCategory || '').trim() }));
+    try {
+      await adminAPI.createCategory({
+        ...categoryForm,
+        order: Number(categoryForm.order) || navCategories.length,
+        subItems,
+      });
+      setMessage({ type: 'success', text: 'Category added' });
+      resetCategoryForm();
+      fetchNavCategories();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to create category' });
+    }
+  };
+
+  const handleEditCategory = (cat) => {
+    setEditingCategory(cat);
+    const fromPath = getParamsFromPath(cat.path);
+    setCategoryForm({
+      name: cat.name,
+      slug: cat.slug,
+      productType: cat.productType || 'watches',
+      gender: cat.gender || fromPath.gender,
+      subCategory: cat.subCategory || fromPath.subCategory,
+      order: cat.order ?? 0,
+    });
+    setSubItemInputs(
+      (cat.subItems && cat.subItems.length)
+        ? cat.subItems.map((s) => ({ name: s.name, subCategory: getSubCategoryFromPath(s.path) }))
+        : [{ name: '', subCategory: '' }]
+    );
+    setActiveSection('categories');
+  };
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    const subItems = subItemInputs
+      .filter((s) => s.name.trim())
+      .map((s) => ({ name: s.name.trim(), subCategory: (s.subCategory || '').trim() }));
+    try {
+      await adminAPI.updateCategory(editingCategory._id, {
+        ...categoryForm,
+        order: Number(categoryForm.order),
+        subItems,
+      });
+      setMessage({ type: 'success', text: 'Category updated' });
+      resetCategoryForm();
+      fetchNavCategories();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to update category' });
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm('Remove this nav category? The link will disappear from the site nav.')) return;
+    try {
+      await adminAPI.deleteCategory(id);
+      setMessage({ type: 'success', text: 'Category removed' });
+      resetCategoryForm();
+      fetchNavCategories();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to delete category' });
     }
   };
 
@@ -322,8 +448,7 @@ const AdminDashboard = () => {
       resetForm();
       fetchProducts(productCategory);
     } catch (error) {
-      const errMsg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Failed to create product';
-      setMessage({ type: 'error', text: errMsg });
+      setMessage({ type: 'error', text: error.message || 'Failed to create product' });
     }
   };
 
@@ -341,7 +466,7 @@ const AdminDashboard = () => {
           ? productForm.images.split(',').map((img) => img.trim())
           : [],
       };
-      await adminAPI.updateProduct(editingProduct._id, payload);
+      await adminAPI.updateProduct(editingProduct._id, { ...payload, category: productCategory });
       setMessage({ type: 'success', text: 'Product updated' });
       resetForm();
       fetchProducts(productCategory);
@@ -750,9 +875,7 @@ const AdminDashboard = () => {
                     onChange={handleProductFormChange}
                     required
                     className="w-full border rounded-lg px-3 py-2 text-sm"
-                    disabled={categoryOptions.length === 0}
                   >
-                    {categoryOptions.length === 0 && <option value="">Loading...</option>}
                     {categoryOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
@@ -1187,292 +1310,166 @@ const AdminDashboard = () => {
         );
 
       case 'categories':
-        const handleAddCategory = async (e) => {
-          e.preventDefault();
-          if (!newCategoryName.trim() || !newCategoryValue.trim()) {
-            setMessage({ type: 'error', text: 'Name and value required' });
-            return;
-          }
-          // Parse subcategories: each line "Name, value" or "Name"
-          const subcats = newCategorySubcategories
-            .split('\n')
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => {
-              const comma = line.indexOf(',');
-              if (comma >= 0) {
-                const name = line.slice(0, comma).trim();
-                const value = line.slice(comma + 1).trim() || name.toLowerCase().replace(/\s+/g, '-');
-                return { name: name || 'Sub', value };
-              }
-              const val = line.toLowerCase().replace(/\s+/g, '-');
-              return { name: line, value: val };
-            });
-          try {
-            await adminAPI.createCategory({
-              name: newCategoryName.trim(),
-              value: newCategoryValue.trim(),
-              subcategories: subcats,
-            });
-            setMessage({ type: 'success', text: `Category added${subcats.length ? ` with ${subcats.length} subcategories` : ''}` });
-            setNewCategoryName('');
-            setNewCategoryValue('');
-            setNewCategorySubcategories('');
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to add category' });
-          }
-        };
-        const handleDeleteCategory = async (id) => {
-          if (!window.confirm('Delete this category? Products may be affected.')) return;
-          try {
-            await adminAPI.deleteCategory(id);
-            setMessage({ type: 'success', text: 'Category deleted' });
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to delete' });
-          }
-        };
-        const handleRemoveSubcategory = async (catId, subId) => {
-          if (!window.confirm('Remove this subcategory?')) return;
-          try {
-            await adminAPI.removeSubcategory(catId, subId);
-            setMessage({ type: 'success', text: 'Subcategory removed' });
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to remove' });
-          }
-        };
-        const handleAddSubToCategory = async (e) => {
-          e.preventDefault();
-          if (!addingSubTo?.catId || !addingSubTo.name?.trim() || !addingSubTo.value?.trim()) {
-            setMessage({ type: 'error', text: 'Name and value required' });
-            return;
-          }
-          try {
-            await adminAPI.addSubcategory(addingSubTo.catId, {
-              name: addingSubTo.name.trim(),
-              value: addingSubTo.value.trim(),
-            });
-            setMessage({ type: 'success', text: 'Subcategory added' });
-            setAddingSubTo(null);
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to add subcategory' });
-          }
-        };
-        const handleUpdateCategory = async (e) => {
-          e.preventDefault();
-          if (!editingCategory?.id || !editingCategory.name?.trim() || !editingCategory.value?.trim()) {
-            setMessage({ type: 'error', text: 'Name and value required' });
-            return;
-          }
-          try {
-            await adminAPI.updateCategory(editingCategory.id, {
-              name: editingCategory.name.trim(),
-              value: editingCategory.value.trim(),
-            });
-            setMessage({ type: 'success', text: 'Category updated' });
-            setEditingCategory(null);
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to update category' });
-          }
-        };
-        const handleUpdateSubcategory = async (e) => {
-          e.preventDefault();
-          if (!editingSubcategory?.catId || !editingSubcategory?.subId || !editingSubcategory.name?.trim() || !editingSubcategory.value?.trim()) {
-            setMessage({ type: 'error', text: 'Name and value required' });
-            return;
-          }
-          const cat = categories.find((c) => c._id === editingSubcategory.catId);
-          if (!cat?.subcategories?.length) return;
-          const updatedSubs = cat.subcategories.map((s) =>
-            s._id === editingSubcategory.subId
-              ? { _id: s._id, name: editingSubcategory.name.trim(), value: editingSubcategory.value.trim() }
-              : { _id: s._id, name: s.name, value: s.value }
-          );
-          try {
-            await adminAPI.updateCategory(editingSubcategory.catId, { subcategories: updatedSubs });
-            setMessage({ type: 'success', text: 'Subcategory updated' });
-            setEditingSubcategory(null);
-            fetchCategories();
-          } catch (err) {
-            setMessage({ type: 'error', text: err.message || 'Failed to update subcategory' });
-          }
-        };
         return (
           <div className="space-y-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Manage Categories & Subcategories</h2>
-            <div className="grid grid-cols-1 gap-6">
-              <div className="bg-white rounded-xl border p-6 space-y-4 max-w-xl">
-                <h3 className="font-semibold text-gray-900">Add Category</h3>
-                <form onSubmit={handleAddCategory} className="space-y-3">
-                  <input
-                    value={newCategoryName}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setNewCategoryName(v);
-                      setNewCategoryValue(nameToValue(v));
-                    }}
-                    placeholder="Category name (e.g. Men Watches)"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                  <input
-                    value={newCategoryValue}
-                    onChange={(e) => setNewCategoryValue(e.target.value)}
-                    placeholder="Auto-filled from name (editable)"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Nav Categories</h2>
+            <p className="text-sm text-gray-600">These categories appear in the site navigation. Add, edit, or remove them here.</p>
+
+            {/* Add / Edit form */}
+            <div className="bg-white rounded-xl border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingCategory ? 'Edit Category' : 'Add Category'}</h3>
+              <form onSubmit={editingCategory ? handleUpdateCategory : handleCreateCategory} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Subcategories (optional, one per line: Name, value)</label>
-                    <textarea
-                      value={newCategorySubcategories}
-                      onChange={(e) => setNewCategorySubcategories(e.target.value)}
-                      placeholder={"Analog, analog\nDigital, digital\nSmartwatch, smartwatch"}
-                      rows={3}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      name="name"
+                      value={categoryForm.name}
+                      onChange={handleCategoryFormChange}
+                      required
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Men's Watches"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Slug (URL id)</label>
+                    <input
+                      name="slug"
+                      value={categoryForm.slug}
+                      onChange={handleCategoryFormChange}
+                      required
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. mens-watches"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                    <select
+                      name="productType"
+                      value={categoryForm.productType}
+                      onChange={handleCategoryFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    >
+                      {productTypeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender (optional)</label>
+                    <select
+                      name="gender"
+                      value={categoryForm.gender}
+                      onChange={handleCategoryFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">— None —</option>
+                      <option value="men">Men</option>
+                      <option value="women">Women</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-0.5">For Watches / Accessories</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">SubCategory (optional)</label>
+                    <input
+                      name="subCategory"
+                      value={categoryForm.subCategory}
+                      onChange={handleCategoryFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. wallet, belt, analog"
+                    />
+                    <p className="text-xs text-gray-500 mt-0.5">Link URL is built automatically</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Order (display order)</label>
+                    <input
+                      name="order"
+                      type="number"
+                      min="0"
+                      value={categoryForm.order}
+                      onChange={handleCategoryFormChange}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
-                    Add Category
-                  </button>
-                </form>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">All Categories & Subcategories</h3>
-              {categories.length === 0 ? (
-                <p className="text-gray-500 text-sm">No categories yet. Add one above.</p>
-              ) : (
-                <div className="space-y-4">
-                  {categories.map((cat) => (
-                    <div key={cat._id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        {editingCategory?.id === cat._id ? (
-                          <form onSubmit={handleUpdateCategory} className="flex flex-wrap items-center gap-2 flex-1">
-                            <input
-                              value={editingCategory.name}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setEditingCategory((p) => ({ ...p, name: v, value: nameToValue(v) }));
-                              }}
-                              placeholder="Category name"
-                              className="border rounded px-2 py-1 text-sm w-32"
-                            />
-                            <input
-                              value={editingCategory.value}
-                              onChange={(e) => setEditingCategory((p) => ({ ...p, value: e.target.value }))}
-                              placeholder="Value (auto-filled)"
-                              className="border rounded px-2 py-1 text-sm w-32"
-                            />
-                            <button type="submit" className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                              Save
-                            </button>
-                            <button type="button" onClick={() => setEditingCategory(null)} className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
-                              Cancel
-                            </button>
-                          </form>
-                        ) : (
-                          <span className="font-medium text-gray-900">{cat.name}</span>
-                        )}
-                        <div className="flex items-center gap-2">
-                          {editingCategory?.id !== cat._id && (
-                            <button
-                              onClick={() => setEditingCategory({ id: cat._id, name: cat.name, value: cat.value })}
-                              className="text-blue-600 text-sm hover:underline flex items-center gap-1"
-                              title="Edit"
-                            >
-                              <IconEdit className="w-4 h-4" /> Edit
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteCategory(cat._id)}
-                            className="text-red-600 text-sm hover:underline"
-                          >
-                            Delete Category
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {(cat.subcategories || []).map((sub) => (
-                          <span key={sub._id} className="inline-flex">
-                            {editingSubcategory?.catId === cat._id && editingSubcategory?.subId === sub._id ? (
-                            <form onSubmit={handleUpdateSubcategory} className="inline-flex items-center gap-1">
-                              <input
-                                value={editingSubcategory.name}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setEditingSubcategory((p) => ({ ...p, name: v, value: nameToValue(v) }));
-                                }}
-                                placeholder="Name"
-                                className="border rounded px-2 py-1 text-sm w-24"
-                              />
-                              <input
-                                value={editingSubcategory.value}
-                                onChange={(e) => setEditingSubcategory((p) => ({ ...p, value: e.target.value }))}
-                                placeholder="Value (auto)"
-                                className="border rounded px-2 py-1 text-sm w-24"
-                              />
-                              <button type="submit" className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Save</button>
-                              <button type="button" onClick={() => setEditingSubcategory(null)} className="px-2 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300">Cancel</button>
-                            </form>
-                            ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm">
-                              {sub.name}
-                              <button
-                                onClick={() => setEditingSubcategory({ catId: cat._id, subId: sub._id, name: sub.name, value: sub.value })}
-                                className="text-blue-500 hover:text-blue-700"
-                                title="Edit"
-                              >
-                                ✎
-                              </button>
-                              <button
-                                onClick={() => handleRemoveSubcategory(cat._id, sub._id)}
-                                className="text-red-500 hover:text-red-700"
-                                title="Remove"
-                              >
-                                ×
-                              </button>
-                            </span>
-                            )}
-                          </span>
-                        ))}
-                        {(!cat.subcategories || cat.subcategories.length === 0) && addingSubTo?.catId !== cat._id && (
-                          <span className="text-gray-400 text-sm">No subcategories</span>
-                        )}
-                        {addingSubTo?.catId === cat._id ? (
-                            <form onSubmit={handleAddSubToCategory} className="inline-flex items-center gap-1 flex-wrap">
-                            <input
-                              value={addingSubTo.name}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setAddingSubTo((p) => ({ ...p, name: v, value: nameToValue(v) }));
-                              }}
-                              placeholder="Subcategory name"
-                              className="border rounded px-2 py-1 text-sm w-28"
-                            />
-                            <input
-                              value={addingSubTo.value}
-                              onChange={(e) => setAddingSubTo((p) => ({ ...p, value: e.target.value }))}
-                              placeholder="Value (auto)"
-                              className="border rounded px-2 py-1 text-sm w-24"
-                            />
-                            <button type="submit" className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Add</button>
-                            <button type="button" onClick={() => setAddingSubTo(null)} className="px-2 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300">Cancel</button>
-                          </form>
-                        ) : (
-                          <button
-                            onClick={() => setAddingSubTo({ catId: cat._id, name: '', value: '' })}
-                            className="text-blue-600 text-sm hover:underline flex items-center gap-1"
-                          >
-                            + Add subcategory
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Sub-items (dropdown links)</label>
+                    <button type="button" onClick={handleAddSubItemRow} className="text-sm text-blue-600 hover:underline">+ Add row</button>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">Label + optional subCategory (e.g. analog, smart). Path is built automatically.</p>
+                  <div className="space-y-2">
+                    {subItemInputs.map((sub, idx) => (
+                      <div key={idx} className="flex flex-wrap gap-2 items-center">
+                        <input
+                          value={sub.name}
+                          onChange={(e) => handleSubItemChange(idx, 'name', e.target.value)}
+                          className="border rounded px-2 py-1.5 text-sm w-36"
+                          placeholder="Label (e.g. View All)"
+                        />
+                        <input
+                          value={sub.subCategory}
+                          onChange={(e) => handleSubItemChange(idx, 'subCategory', e.target.value)}
+                          className="border rounded px-2 py-1.5 text-sm flex-1 min-w-[120px]"
+                          placeholder="SubCategory (e.g. analog, smart)"
+                        />
+                        <button type="button" onClick={() => handleRemoveSubItem(idx)} className="text-red-600 text-sm">Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+                    {editingCategory ? 'Update Category' : 'Add Category'}
+                  </button>
+                  {editingCategory && (
+                    <button type="button" onClick={resetCategoryForm} className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* List */}
+            <div className="bg-white rounded-xl border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Current categories</h3>
+              {loading ? (
+                <p className="text-sm text-gray-500">Loading...</p>
+              ) : navCategories.length === 0 ? (
+                <p className="text-sm text-gray-500">No categories yet. Add one above.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {navCategories.map((cat) => (
+                    <li key={cat._id} className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="font-medium text-gray-900">{cat.name}</p>
+                        <p className="text-xs text-gray-500">{cat.path} · {cat.productType}</p>
+                        {cat.subItems?.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">Sub: {cat.subItems.map((s) => s.name).join(', ')}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditCategory(cat)}
+                          className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat._id)}
+                          className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

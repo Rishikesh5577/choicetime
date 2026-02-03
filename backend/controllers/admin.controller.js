@@ -9,6 +9,7 @@ import Lens from '../models/product/lens.model.js';
 import Accessory from '../models/product/accessory.model.js';
 import Shoes from '../models/product/shoes.model.js';
 import Saree from '../models/product/saree.model.js';
+import Category from '../models/Category.js';
 
 const productModelMap = {
   men: Men,
@@ -19,8 +20,6 @@ const productModelMap = {
   women: Women,
   watch: Watch,
   watches: Watch,
-  'men-watches': Watch,
-  'women-watches': Watch,
   'watch-new': WatchNew,
   'WATCH': WatchNew,
   'WATCHES': WatchNew,
@@ -28,10 +27,6 @@ const productModelMap = {
   lenses: Lens,
   accessory: Accessory,
   accessories: Accessory,
-  'men-wallet': Accessory,
-  'women-wallet': Accessory,
-  'men-belt': Accessory,
-  'women-belt': Accessory,
   shoes: Shoes,
   'Shoes': Shoes,
   'Shoe': Shoes,
@@ -299,23 +294,7 @@ export const getAdminProducts = async (req, res) => {
       }
       
       const Model = resolveProductModel(category);
-      let query = {};
-      if (category === 'men-watches') query.gender = 'men';
-      else if (category === 'women-watches') query.gender = 'women';
-      else if (category === 'men-wallet') {
-        query.gender = 'men';
-        query.subCategory = { $regex: /wallet/i };
-      } else if (category === 'women-wallet') {
-        query.gender = 'women';
-        query.subCategory = { $regex: /wallet/i };
-      } else if (category === 'men-belt') {
-        query.gender = 'men';
-        query.subCategory = { $regex: /belt/i };
-      } else if (category === 'women-belt') {
-        query.gender = 'women';
-        query.subCategory = { $regex: /belt/i };
-      }
-      const products = await Model.find(query).sort({ updatedAt: -1 }).limit(200);
+      const products = await Model.find().sort({ updatedAt: -1 }).limit(200);
       
       // Normalize products to ensure images are arrays
       const normalizedProducts = products.map((product) => {
@@ -428,35 +407,7 @@ export const createProduct = async (req, res) => {
     }
     
     const Model = resolveProductModel(category);
-    let payload = { ...productData };
-    if (category === 'men-watches' || category === 'women-watches') {
-      payload = {
-        name: productData.name || '',
-        brand: productData.brand || '',
-        price: Number(productData.price) || 0,
-        originalPrice: Number(productData.originalPrice || productData.price) || 0,
-        discountPercent: Number(productData.discountPercent) || 0,
-        stock: Number(productData.stock) || 0,
-        description: productData.description || '',
-        category: 'watches',
-        gender: category === 'men-watches' ? 'men' : 'women',
-        subCategory: (subCategory || productData.subCategory || '').toString().trim().toLowerCase().replace(/\s+/g, '-'),
-        images: Array.isArray(productData.images) ? productData.images : (productData.images ? [productData.images] : []),
-        isNewArrival: Boolean(productData.isNewArrival),
-        onSale: Boolean(productData.onSale),
-        isFeatured: Boolean(productData.isFeatured),
-        inStock: (Number(productData.stock) || 0) > 0,
-      };
-    } else if (category === 'men-wallet' || category === 'women-wallet') {
-      payload.category = 'Accessories';
-      payload.gender = category === 'men-wallet' ? 'men' : 'women';
-      payload.subCategory = subCategory || productData.subCategory || 'wallet';
-    } else if (category === 'men-belt' || category === 'women-belt') {
-      payload.category = 'Accessories';
-      payload.gender = category === 'men-belt' ? 'men' : 'women';
-      payload.subCategory = subCategory || productData.subCategory || 'belt';
-    }
-    const product = await Model.create(payload);
+    const product = await Model.create(productData);
 
     res.status(201).json({
       success: true,
@@ -464,7 +415,6 @@ export const createProduct = async (req, res) => {
       data: { product },
     });
   } catch (error) {
-    console.error('[createProduct] Error:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating product',
@@ -665,6 +615,167 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting product',
+      error: error.message,
+    });
+  }
+};
+
+// --- Nav Categories (admin CRUD) ---
+// Build path from productType + gender + subCategory (no manual path needed)
+function buildCategoryPath(productType, gender, subCategory) {
+  const base = { watches: '/watches', accessories: '/accessories', men: '/men', women: '/women' }[productType] || '/';
+  if (productType === 'watches' || productType === 'accessories') {
+    const params = new URLSearchParams();
+    if (gender) params.set('gender', gender);
+    if (subCategory) params.set('subCategory', subCategory);
+    const q = params.toString();
+    return q ? `${base}?${q}` : base;
+  }
+  if (productType === 'men' || productType === 'women') {
+    const params = new URLSearchParams();
+    if (subCategory) params.set('subCategory', subCategory);
+    const q = params.toString();
+    return q ? `${base}?${q}` : base;
+  }
+  return base;
+}
+
+function normalizeSubItems(subItems, productType, gender) {
+  if (!Array.isArray(subItems)) return [];
+  return subItems.map((item) => {
+    const name = (item.name || '').trim();
+    if (!name) return null;
+    const path = item.path && item.path.trim()
+      ? item.path.trim()
+      : buildCategoryPath(productType, gender, (item.subCategory || '').trim() || null);
+    return { name, path };
+  }).filter(Boolean);
+}
+
+export const getAdminCategories = async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ order: 1 });
+    res.status(200).json({
+      success: true,
+      data: { categories },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories',
+      error: error.message,
+    });
+  }
+};
+
+export const createCategory = async (req, res) => {
+  try {
+    const { name, slug, path: pathInput, productType, gender, subCategory, order, subItems } = req.body;
+    if (!name || !slug || !productType) {
+      return res.status(400).json({
+        success: false,
+        message: 'name, slug and productType are required',
+      });
+    }
+    const slugNorm = slug.trim().toLowerCase().replace(/\s+/g, '-');
+    const genderVal = (gender || '').trim() || null;
+    const subCatVal = (subCategory || '').trim() || null;
+    const path = (pathInput && pathInput.trim()) || buildCategoryPath(productType, genderVal, subCatVal);
+    const normalizedSubItems = normalizeSubItems(subItems, productType, genderVal);
+    const category = await Category.create({
+      name,
+      slug: slugNorm,
+      path,
+      productType,
+      gender: genderVal || '',
+      subCategory: subCatVal || '',
+      order: typeof order === 'number' ? order : await Category.countDocuments(),
+      subItems: normalizedSubItems,
+    });
+    res.status(201).json({
+      success: true,
+      message: 'Category created',
+      data: { category },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A category with this slug already exists',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error creating category',
+      error: error.message,
+    });
+  }
+};
+
+export const updateCategory = async (req, res) => {
+  try {
+    const { name, slug, path: pathInput, productType, gender, subCategory, order, subItems } = req.body;
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found',
+      });
+    }
+    if (name !== undefined) category.name = name;
+    if (slug !== undefined) category.slug = slug.trim().toLowerCase().replace(/\s+/g, '-');
+    if (productType !== undefined) category.productType = productType;
+    const genderVal = (gender !== undefined ? gender : category.gender) || null;
+    const subCatVal = (subCategory !== undefined ? subCategory : category.subCategory) || null;
+    if (pathInput !== undefined && pathInput.trim()) {
+      category.path = pathInput.trim();
+    } else {
+      category.path = buildCategoryPath(category.productType, genderVal, subCatVal);
+    }
+    category.gender = genderVal || '';
+    category.subCategory = subCatVal || '';
+    if (typeof order === 'number') category.order = order;
+    if (Array.isArray(subItems)) {
+      category.subItems = normalizeSubItems(subItems, category.productType, genderVal);
+    }
+    await category.save();
+    res.status(200).json({
+      success: true,
+      message: 'Category updated',
+      data: { category },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'A category with this slug already exists',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error updating category',
+      error: error.message,
+    });
+  }
+};
+
+export const deleteCategory = async (req, res) => {
+  try {
+    const category = await Category.findByIdAndDelete(req.params.id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Category deleted',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting category',
       error: error.message,
     });
   }

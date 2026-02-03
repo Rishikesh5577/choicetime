@@ -12,15 +12,11 @@ import {
   deleteProduct,
   getAllUsers,
   deleteUser,
-} from '../controllers/admin.controller.js';
-import {
-  getCategories,
+  getAdminCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-  addSubcategory,
-  removeSubcategory,
-} from '../controllers/category.controller.js';
+} from '../controllers/admin.controller.js';
 
 const router = express.Router();
 
@@ -39,12 +35,10 @@ router.delete('/products/:id', deleteProduct);
 router.get('/users', getAllUsers);
 router.delete('/users/:id', deleteUser);
 
-router.get('/categories', getCategories);
+router.get('/categories', getAdminCategories);
 router.post('/categories', createCategory);
 router.put('/categories/:id', updateCategory);
 router.delete('/categories/:id', deleteCategory);
-router.post('/categories/:id/subcategories', addSubcategory);
-router.delete('/categories/:id/subcategories/:subId', removeSubcategory);
 
 export default router;
 
