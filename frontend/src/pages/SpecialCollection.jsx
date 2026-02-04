@@ -145,16 +145,29 @@ const SpecialCollection = ({ type }) => {
     });
   };
 
-  const normalizeProduct = (product) => ({
-    ...product,
-    id: product._id || product.id,
-    images: product.images || [product.image || product.thumbnail],
-    image: product.images?.[0] || product.image || product.thumbnail,
-    price: product.finalPrice || product.price,
-    originalPrice: product.originalPrice || product.mrp || product.price,
-    rating: product.rating || 0,
-    reviews: product.reviewsCount || product.reviews || 0,
-  });
+  const normalizeProduct = (product) => {
+    let images = product.images;
+    if (images && !Array.isArray(images) && typeof images === 'object') {
+      const keys = Object.keys(images).filter((k) => images[k] && typeof images[k] === 'string' && images[k].trim() !== '');
+      keys.sort((a, b) => (parseInt(String(a).replace(/\D/g, ''), 10) || 0) - (parseInt(String(b).replace(/\D/g, ''), 10) || 0));
+      images = keys.map((k) => images[k].trim());
+    }
+    if (!Array.isArray(images)) images = [];
+    if (images.length === 0 && (product.image || product.thumbnail)) {
+      images = [product.image || product.thumbnail].filter(Boolean);
+    }
+    const firstImage = images[0] || product.image || product.thumbnail;
+    return {
+      ...product,
+      id: product._id || product.id,
+      images,
+      image: firstImage,
+      price: product.finalPrice || product.price,
+      originalPrice: product.originalPrice || product.mrp || product.price,
+      rating: product.rating || 0,
+      reviews: product.reviewsCount || product.reviews || 0,
+    };
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">

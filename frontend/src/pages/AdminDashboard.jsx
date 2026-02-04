@@ -136,6 +136,15 @@ const AdminDashboard = () => {
 
   const isAdmin = user?.isAdmin;
 
+  // Parse query from path (e.g. /watches?gender=men&subCategory=analog) — defined early for useMemos below
+  const getParamsFromPath = (path) => {
+    if (!path || !path.includes('?')) return { gender: '', subCategory: '' };
+    const q = path.split('?')[1] || '';
+    const p = new URLSearchParams(q);
+    return { gender: p.get('gender') || '', subCategory: p.get('subCategory') || '' };
+  };
+  const getSubCategoryFromPath = (path) => getParamsFromPath(path).subCategory;
+
   useEffect(() => {
     if (!isAdmin) return;
     if (activeSection === 'dashboard' || activeSection === 'orders' || activeSection === 'order-status') {
@@ -143,16 +152,55 @@ const AdminDashboard = () => {
       fetchOrders();
     }
     if (activeSection === 'products' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'delete-product') {
-      fetchProducts(productCategory);
+      let categoryToFetch = productCategory;
+      if (activeSection === 'products' && navCategories.length > 0 && productCategory) {
+        const nav = navCategories.find((c) => c.slug === productCategory);
+        if (nav) categoryToFetch = nav.productType;
+      }
+      fetchProducts(categoryToFetch);
       setSelectedSubCategory(''); // Reset subcategory filter when category changes
     }
     if (activeSection === 'users') {
       fetchUsers();
     }
-    if (activeSection === 'categories') {
+    if (activeSection === 'categories' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'products') {
       fetchNavCategories();
     }
   }, [isAdmin, activeSection, productCategory]);
+
+  // For View Products: resolve backend category from selected nav (slug → productType)
+  const backendCategoryForViewProducts = useMemo(() => {
+    if (navCategories.length > 0 && productCategory) {
+      const nav = navCategories.find((c) => c.slug === productCategory);
+      if (nav) return nav.productType;
+    }
+    return productCategory;
+  }, [navCategories, productCategory]);
+
+  const selectedNavForViewProducts = useMemo(
+    () => (productCategory ? navCategories.find((c) => c.slug === productCategory) : null),
+    [navCategories, productCategory]
+  );
+
+  const viewSubCategoryOptionsFromNav = useMemo(() => {
+    if (!selectedNavForViewProducts?.subItems?.length) return [];
+    return selectedNavForViewProducts.subItems.map((si) => ({
+      label: si.name,
+      value: getSubCategoryFromPath(si.path),
+    }));
+  }, [selectedNavForViewProducts]);
+
+  // When View Products uses nav categories, default to first nav category if current selection is not a nav slug
+  useEffect(() => {
+    if (
+      activeSection !== 'products' ||
+      navCategories.length === 0 ||
+      !productCategory ||
+      navCategories.some((c) => c.slug === productCategory)
+    )
+      return;
+    setProductCategory(navCategories[0].slug);
+  }, [activeSection, navCategories, productCategory]);
 
   const fetchSummary = async () => {
     try {
@@ -240,14 +288,22 @@ const AdminDashboard = () => {
     setEditingCategory(null);
   };
 
-  // Parse query from path (e.g. /watches?gender=men&subCategory=analog)
-  const getParamsFromPath = (path) => {
-    if (!path || !path.includes('?')) return { gender: '', subCategory: '' };
-    const q = path.split('?')[1] || '';
-    const p = new URLSearchParams(q);
-    return { gender: p.get('gender') || '', subCategory: p.get('subCategory') || '' };
-  };
-  const getSubCategoryFromPath = (path) => getParamsFromPath(path).subCategory;
+  // For Add/Edit Product: category and subcategory options from Nav Categories
+  const productCategoryOptionsFromNav = useMemo(
+    () => navCategories.map((cat) => ({ label: cat.name, value: cat.slug })),
+    [navCategories]
+  );
+  const selectedNavCategoryForProduct = useMemo(
+    () => (productForm.category ? navCategories.find((c) => c.slug === productForm.category) : null),
+    [navCategories, productForm.category]
+  );
+  const productSubCategoryOptionsFromNav = useMemo(() => {
+    if (!selectedNavCategoryForProduct?.subItems?.length) return [];
+    return selectedNavCategoryForProduct.subItems.map((si) => ({
+      label: si.name,
+      value: getSubCategoryFromPath(si.path),
+    }));
+  }, [selectedNavCategoryForProduct]);
 
   const handleCategoryFormChange = (e) => {
     const { name, value } = e.target;
@@ -393,7 +449,7 @@ const AdminDashboard = () => {
 
   const resetForm = () => {
     setProductForm({
-      category: productCategory,
+      category: navCategories.length > 0 ? '' : productCategory,
       name: '',
       brand: '',
       price: '',
@@ -412,8 +468,17 @@ const AdminDashboard = () => {
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
+    let categoryValue = product.category || productCategory;
+    if (navCategories.length > 0) {
+      const match = navCategories.find(
+        (c) =>
+          c.productType === (product.category || productCategory) &&
+          (c.gender || '') === (product.gender || '')
+      );
+      if (match) categoryValue = match.slug;
+    }
     setProductForm({
-      category: product.category || productCategory,
+      category: categoryValue,
       name: product.name || '',
       brand: product.brand || '',
       price: product.price || product.finalPrice || '',
@@ -443,10 +508,18 @@ const AdminDashboard = () => {
           ? productForm.images.split(',').map((img) => img.trim())
           : [],
       };
+      if (navCategories.length > 0 && productForm.category) {
+        const navCat = navCategories.find((c) => c.slug === productForm.category);
+        if (navCat) {
+          payload.category = navCat.productType;
+          payload.subCategory = productForm.subCategory;
+          if (navCat.gender) payload.gender = navCat.gender;
+        }
+      }
       await adminAPI.createProduct(payload);
       setMessage({ type: 'success', text: 'Product created' });
       resetForm();
-      fetchProducts(productCategory);
+      fetchProducts(payload.category || productCategory);
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to create product' });
     }
@@ -466,10 +539,22 @@ const AdminDashboard = () => {
           ? productForm.images.split(',').map((img) => img.trim())
           : [],
       };
-      await adminAPI.updateProduct(editingProduct._id, { ...payload, category: productCategory });
+      let backendCategory = productCategory;
+      if (navCategories.length > 0 && productForm.category) {
+        const navCat = navCategories.find((c) => c.slug === productForm.category);
+        if (navCat) {
+          payload.category = navCat.productType;
+          payload.subCategory = productForm.subCategory;
+          backendCategory = navCat.productType;
+          if (navCat.gender) payload.gender = navCat.gender;
+        }
+      } else {
+        payload.category = productCategory;
+      }
+      await adminAPI.updateProduct(editingProduct._id, payload);
       setMessage({ type: 'success', text: 'Product updated' });
       resetForm();
-      fetchProducts(productCategory);
+      fetchProducts(backendCategory);
       setActiveSection('products');
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to update product' });
@@ -479,9 +564,11 @@ const AdminDashboard = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Delete this product?')) return;
     try {
-      await adminAPI.deleteProduct(id, productCategory);
+      const catForApi =
+        activeSection === 'products' && navCategories.length > 0 ? backendCategoryForViewProducts : productCategory;
+      await adminAPI.deleteProduct(id, catForApi);
       setMessage({ type: 'success', text: 'Product deleted' });
-      fetchProducts(productCategory);
+      fetchProducts(catForApi);
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to delete product' });
     }
@@ -591,30 +678,33 @@ const AdminDashboard = () => {
           </div>
         );
 
-      case 'products':
-        // Filter products by subcategory if selected
-        let filteredProducts = selectedSubCategory
-          ? products.filter((product) => {
-              // Get subcategory from various possible field names
-              const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
-              const normalizedSelectedSub = selectedSubCategory.toLowerCase().trim();
-              
-              // For saree filtering, also check if product title contains "saree" or is from Saree collection
-              if (normalizedSelectedSub === 'saree') {
-                const title = (product.title || product.name || '').toLowerCase();
-                const isSareeByTitle = title.includes('saree') || title.includes('sari');
-                const isSareeByCategory = product.category === 'saree' || product.category === 'Saree';
-                
-                return productSubCategory === 'saree' || 
-                       productSubCategory === 'sari' ||
-                       isSareeByTitle ||
-                       isSareeByCategory;
-              }
-              
-              // For other subcategories, do exact match
-              return productSubCategory === normalizedSelectedSub;
-            })
-          : products;
+      case 'products': {
+        // Filter by nav category gender (when viewing by nav category)
+        let filteredProducts = products;
+        if (selectedNavForViewProducts?.gender) {
+          filteredProducts = filteredProducts.filter(
+            (p) => (p.gender || '').toLowerCase() === selectedNavForViewProducts.gender.toLowerCase()
+          );
+        }
+        // Filter by subcategory if selected
+        if (selectedSubCategory) {
+          filteredProducts = filteredProducts.filter((product) => {
+            const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
+            const normalizedSelectedSub = selectedSubCategory.toLowerCase().trim();
+            if (normalizedSelectedSub === 'saree') {
+              const title = (product.title || product.name || '').toLowerCase();
+              const isSareeByTitle = title.includes('saree') || title.includes('sari');
+              const isSareeByCategory = product.category === 'saree' || product.category === 'Saree';
+              return (
+                productSubCategory === 'saree' ||
+                productSubCategory === 'sari' ||
+                isSareeByTitle ||
+                isSareeByCategory
+              );
+            }
+            return productSubCategory === normalizedSelectedSub;
+          });
+        }
 
         // Sort products by price
         if (sortBy !== 'default') {
@@ -649,19 +739,27 @@ const AdminDashboard = () => {
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <select
                   value={productCategory}
-                onChange={(e) => {
-                  setProductCategory(e.target.value);
-                  setSelectedSubCategory(''); // Reset subcategory when category changes
-                  setSortBy('default'); // Reset sort when category changes
-                  setCurrentPage(1); // Reset to first page when category changes
-                }}
+                  onChange={(e) => {
+                    setProductCategory(e.target.value);
+                    setSelectedSubCategory('');
+                    setSortBy('default');
+                    setCurrentPage(1);
+                  }}
                   className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
                 >
-                  {categoryOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
+                  {productCategoryOptionsFromNav.length > 0 ? (
+                    productCategoryOptionsFromNav.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))
+                  ) : (
+                    categoryOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <select
                   value={sortBy}
@@ -678,8 +776,10 @@ const AdminDashboard = () => {
               </div>
             </div>
             
-            {/* Subcategory Filter Buttons */}
-            {subCategoryOptions[productCategory] && subCategoryOptions[productCategory].length > 0 && (
+            {/* Subcategory Filter Buttons - from Nav Categories when available */}
+            {(viewSubCategoryOptionsFromNav.length > 0 ||
+              (subCategoryOptions[backendCategoryForViewProducts] &&
+                subCategoryOptions[backendCategoryForViewProducts].length > 0)) && (
               <div className="bg-white rounded-lg border p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-sm font-medium text-gray-700">Filter by Sub Category:</span>
@@ -687,7 +787,7 @@ const AdminDashboard = () => {
                     <button
                       onClick={() => {
                         setSelectedSubCategory('');
-                        setCurrentPage(1); // Reset to first page when filter clears
+                        setCurrentPage(1);
                       }}
                       className="text-xs text-blue-600 hover:text-blue-700 underline"
                     >
@@ -699,7 +799,7 @@ const AdminDashboard = () => {
                   <button
                     onClick={() => {
                       setSelectedSubCategory('');
-                      setCurrentPage(1); // Reset to first page when filter changes
+                      setCurrentPage(1);
                     }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                       selectedSubCategory === ''
@@ -709,22 +809,39 @@ const AdminDashboard = () => {
                   >
                     All
                   </button>
-                  {subCategoryOptions[productCategory].map((subCat) => (
-                    <button
-                      key={subCat}
-                      onClick={() => {
-                        setSelectedSubCategory(subCat);
-                        setCurrentPage(1); // Reset to first page when filter changes
-                      }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                        selectedSubCategory === subCat
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {subCat.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                    </button>
-                  ))}
+                  {viewSubCategoryOptionsFromNav.length > 0
+                    ? viewSubCategoryOptionsFromNav.map((subOpt, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedSubCategory(subOpt.value);
+                            setCurrentPage(1);
+                          }}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                            selectedSubCategory === subOpt.value
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {subOpt.label}
+                        </button>
+                      ))
+                    : subCategoryOptions[backendCategoryForViewProducts]?.map((subCat) => (
+                        <button
+                          key={subCat}
+                          onClick={() => {
+                            setSelectedSubCategory(subCat);
+                            setCurrentPage(1);
+                          }}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                            selectedSubCategory === subCat
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {subCat.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        </button>
+                      ))}
                 </div>
               </div>
             )}
@@ -748,16 +865,15 @@ const AdminDashboard = () => {
                   {paginatedProducts.map((product) => (
                   <div key={product._id} className="bg-white border rounded-lg overflow-hidden">
                     {(() => {
-                      // Handle different image formats
                       let imageUrl = null;
                       if (Array.isArray(product.images) && product.images.length > 0) {
                         imageUrl = product.images[0];
                       } else if (product.images && typeof product.images === 'object') {
-                        // Handle object format (e.g., { image1: 'url', image2: 'url' })
                         imageUrl = product.images.image1 || product.images.image2 || product.images.image3 || product.images.image4;
-                      } else if (typeof product.images === 'string') {
+                      } else if (typeof product.images === 'string' && product.images.trim()) {
                         imageUrl = product.images;
                       }
+                      if (!imageUrl) imageUrl = product.thumbnail || product.image;
                       return imageUrl ? (
                         <img
                           src={imageUrl}
@@ -860,11 +976,17 @@ const AdminDashboard = () => {
             )}
           </div>
         );
+      }
 
       case 'add-product':
         return (
           <div className="space-y-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Add New Product</h2>
+            {productCategoryOptionsFromNav.length === 0 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+                Create categories in <button type="button" onClick={() => setActiveSection('categories')} className="font-semibold underline">Nav Categories</button> first, then they will appear here.
+              </p>
+            )}
             <form onSubmit={handleCreateProduct} className="bg-white rounded-xl border p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -876,7 +998,10 @@ const AdminDashboard = () => {
                     required
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   >
-                    {categoryOptions.map((opt) => (
+                    <option value="">
+                      {productCategoryOptionsFromNav.length ? 'Select Category' : 'No categories — add in Nav Categories'}
+                    </option>
+                    {productCategoryOptionsFromNav.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
@@ -894,18 +1019,18 @@ const AdminDashboard = () => {
                     disabled={!productForm.category}
                   >
                     <option value="">
-                      {productForm.category 
-                        ? 'Select Sub Category' 
+                      {productForm.category
+                        ? 'Select Sub Category'
                         : 'Select Category First'}
                     </option>
-                    {productForm.category && subCategoryOptions[productForm.category]?.map((subCat) => (
-                      <option key={subCat} value={subCat}>
-                        {subCat.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
+                      <option key={idx} value={subOpt.value}>
+                        {subOpt.label}
                       </option>
                     ))}
                   </select>
-                  {productForm.category && !subCategoryOptions[productForm.category] && (
-                    <p className="text-xs text-gray-500 mt-1">No subcategories available for this category</p>
+                  {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">No sub-items for this category</p>
                   )}
                 </div>
                 <div>
@@ -1079,11 +1204,25 @@ const AdminDashboard = () => {
                       required
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     >
-                      {categoryOptions.map((opt) => (
+                      <option value="">Select Category</option>
+                      {productCategoryOptionsFromNav.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
                       ))}
+                      {productCategoryOptionsFromNav.length === 0 &&
+                        categoryOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      {editingProduct &&
+                        productForm.category &&
+                        !productCategoryOptionsFromNav.some((o) => o.value === productForm.category) && (
+                          <option value={productForm.category}>
+                            {productForm.category}
+                          </option>
+                        )}
                     </select>
                   </div>
                   <div>
@@ -1097,18 +1236,23 @@ const AdminDashboard = () => {
                       disabled={!productForm.category}
                     >
                       <option value="">
-                        {productForm.category 
-                          ? 'Select Sub Category' 
-                          : 'Select Category First'}
+                        {productForm.category ? 'Select Sub Category' : 'Select Category First'}
                       </option>
-                      {productForm.category && subCategoryOptions[productForm.category]?.map((subCat) => (
-                        <option key={subCat} value={subCat}>
-                          {subCat.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
+                        <option key={idx} value={subOpt.value}>
+                          {subOpt.label}
                         </option>
                       ))}
+                      {productSubCategoryOptionsFromNav.length === 0 &&
+                        productForm.category &&
+                        subCategoryOptions[productForm.category]?.map((subCat) => (
+                          <option key={subCat} value={subCat}>
+                            {subCat.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                          </option>
+                        ))}
                     </select>
-                    {productForm.category && !subCategoryOptions[productForm.category] && (
-                      <p className="text-xs text-gray-500 mt-1">No subcategories available for this category</p>
+                    {productForm.category && productSubCategoryOptionsFromNav.length === 0 && !subCategoryOptions[productForm.category] && (
+                      <p className="text-xs text-gray-500 mt-1">No sub-items for this category</p>
                     )}
                   </div>
                   <div>

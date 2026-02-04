@@ -258,40 +258,19 @@ const Navbar = () => {
         </div>
       </nav>
 
-        {/* ========== SECONDARY NAVBAR (Categories – desktop only) ========== */}
+        {/* ========== SECONDARY NAVBAR (Categories – only category name, click = go to category) ========== */}
         <nav className="hidden md:block bg-gray-50/90 border-b border-gray-200 backdrop-blur-sm">
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
             <div className="flex items-center justify-center gap-1 lg:gap-2 py-2">
               {navLinks.map((link) => (
-                <div key={link.id} className="relative group">
-                  <Link 
-                    to={link.path}
-                    className={`inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded-md transition-all
-                    ${activeCategory === link.id ? 'text-black bg-white shadow-sm' : 'text-gray-600 hover:text-black hover:bg-white/60'}`}
-                  >
-                    {link.label}
-                    <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </Link>
-                  {link.subItems && (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="bg-white rounded-lg shadow-xl border border-gray-100 py-4 px-4 w-56">
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-l border-t border-gray-100 transform rotate-45"></div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 pb-2 border-b border-gray-100">
-                          {link.label}
-                        </p>
-                        {link.subItems.map((sub, idx) => (
-                          <Link 
-                            key={idx} 
-                            to={sub.path}
-                            className="block py-2 text-sm text-gray-600 hover:text-black hover:pl-2 transition-all duration-200"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <Link
+                  key={link.id}
+                  to={link.path}
+                  className={`inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-wider rounded-md transition-all
+                  ${activeCategory === link.id ? 'text-black bg-white shadow-sm' : 'text-gray-600 hover:text-black hover:bg-white/60'}`}
+                >
+                  {link.label}
+                </Link>
               ))}
             </div>
           </div>
@@ -429,6 +408,7 @@ const Navbar = () => {
                               {sub.name}
                             </Link>
                          ))}
+                         <Link to={link.path} onClick={() => setIsMobileMenuOpen(false)} className="block text-sm font-bold text-black pt-2">Shop All</Link>
                        </div>
                     </div>
                   </div>

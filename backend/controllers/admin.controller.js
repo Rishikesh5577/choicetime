@@ -54,6 +54,45 @@ const resolveProductModel = (category) => {
   return model;
 };
 
+const isWatchNewModel = (category) => {
+  if (!category) return false;
+  const c = category.toString().toUpperCase();
+  return c === 'WATCH' || c === 'WATCHES' || category === 'watch-new';
+};
+
+/** Build WatchNew document from admin payload (name, price, images array, etc.) */
+const buildWatchNewData = (productData, gender) => {
+  const imagesArr = Array.isArray(productData.images) ? productData.images : [];
+  const categoryId = productData.categoryId || (gender ? `${gender}-watches` : 'watches');
+  return {
+    title: productData.name || productData.title || '',
+    mrp: Number(productData.originalPrice ?? productData.price ?? productData.mrp ?? 0),
+    discountPercent: Number(productData.discountPercent ?? 0),
+    description: productData.description || '',
+    category: (productData.category || 'WATCH').toUpperCase(),
+    categoryId,
+    product_info: {
+      brand: productData.brand || '',
+      manufacturer: productData.manufacturer || '',
+      IncludedComponents: productData.IncludedComponents || '',
+    },
+    images: {
+      image1: (imagesArr[0] && typeof imagesArr[0] === 'string') ? imagesArr[0].trim() : '',
+      image2: (imagesArr[1] && typeof imagesArr[1] === 'string') ? imagesArr[1].trim() : '',
+      image3: (imagesArr[2] && typeof imagesArr[2] === 'string') ? imagesArr[2].trim() : '',
+      image4: (imagesArr[3] && typeof imagesArr[3] === 'string') ? imagesArr[3].trim() : '',
+    },
+    stock: Number(productData.stock ?? 0),
+    isNewArrival: Boolean(productData.isNewArrival),
+    onSale: Boolean(productData.onSale),
+    isFeatured: Boolean(productData.isFeatured),
+    inStock: (Number(productData.stock ?? 0)) > 0,
+    rating: Number(productData.rating ?? 0),
+    ratingsCount: Number(productData.ratingsCount ?? 0),
+    reviewsCount: Number(productData.reviewsCount ?? 0),
+  };
+};
+
 export const getDashboardSummary = async (req, res) => {
   try {
     // Count all documents in each collection (includes duplicates, multiple entries, etc.)
@@ -296,22 +335,25 @@ export const getAdminProducts = async (req, res) => {
       const Model = resolveProductModel(category);
       const products = await Model.find().sort({ updatedAt: -1 }).limit(200);
       
-      // Normalize products to ensure images are arrays
+      // Normalize products to ensure images are arrays and name/brand for display
       const normalizedProducts = products.map((product) => {
         const productObj = product.toObject ? product.toObject() : product;
         
         // Normalize images to array format
         if (productObj.images && typeof productObj.images === 'object' && !Array.isArray(productObj.images)) {
-          // Convert object format { image1, image2, ... } to array
+          // Convert object format { image1, image2, ... } to array (keep non-empty strings)
           productObj.images = [
             productObj.images.image1,
             productObj.images.image2,
             productObj.images.image3,
             productObj.images.image4,
-          ].filter(Boolean);
+          ].filter((img) => img && typeof img === 'string' && img.trim() !== '');
         } else if (!Array.isArray(productObj.images)) {
           productObj.images = productObj.images ? [productObj.images] : [];
         }
+        // For WatchNew/similar: expose name and brand for admin UI
+        if (!productObj.name && productObj.title) productObj.name = productObj.title;
+        if (!productObj.brand && productObj.product_info?.brand) productObj.brand = productObj.product_info.brand;
         
         return productObj;
       });
@@ -407,7 +449,30 @@ export const createProduct = async (req, res) => {
     }
     
     const Model = resolveProductModel(category);
-    const product = await Model.create(productData);
+
+    if (isWatchNewModel(category)) {
+      const watchNewData = buildWatchNewData(productData, productData.gender);
+      const product = await WatchNew.create(watchNewData);
+      const productObj = product.toObject ? product.toObject() : product;
+      productObj.name = productObj.title;
+      productObj.brand = productObj.product_info?.brand;
+      productObj.images = [
+        productObj.images?.image1,
+        productObj.images?.image2,
+        productObj.images?.image3,
+        productObj.images?.image4,
+      ].filter(Boolean);
+      return res.status(201).json({
+        success: true,
+        message: 'Product created successfully',
+        data: { product: productObj },
+      });
+    }
+
+    const product = await Model.create({
+      ...productData,
+      subCategory: subCategory || productData.subCategory,
+    });
 
     res.status(201).json({
       success: true,
@@ -517,7 +582,37 @@ export const updateProduct = async (req, res) => {
     }
     
     const Model = resolveProductModel(category);
-    product = await Model.findByIdAndUpdate(req.params.id, productData, { new: true });
+
+    if (isWatchNewModel(category)) {
+      const watchNewData = buildWatchNewData(productData, productData.gender);
+      product = await WatchNew.findByIdAndUpdate(req.params.id, watchNewData, { new: true });
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found',
+        });
+      }
+      const productObj = product.toObject ? product.toObject() : product;
+      productObj.name = productObj.title;
+      productObj.brand = productObj.product_info?.brand;
+      productObj.images = [
+        productObj.images?.image1,
+        productObj.images?.image2,
+        productObj.images?.image3,
+        productObj.images?.image4,
+      ].filter(Boolean);
+      return res.status(200).json({
+        success: true,
+        message: 'Product updated successfully',
+        data: { product: productObj },
+      });
+    }
+
+    product = await Model.findByIdAndUpdate(
+      req.params.id,
+      { ...productData, subCategory: subCategory !== undefined ? subCategory : productData.subCategory },
+      { new: true }
+    );
 
     if (!product) {
       return res.status(404).json({

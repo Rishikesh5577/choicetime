@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
-import { productAPI } from '../utils/api';
+import { productAPI, categoriesAPI } from '../utils/api';
 
 const CategoryPage = () => {
   const { gender, category } = useParams();
@@ -28,13 +28,27 @@ const CategoryPage = () => {
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showFilters, setShowFilters] = useState(true); // Desktop filter visibility
+  const [navCategories, setNavCategories] = useState([]);
 
   const pathSegments = pathname.split('/').filter(Boolean);
   const genderFromPath = pathSegments[0] === 'men' ? 'men' : pathSegments[0] === 'women' ? 'women' : null;
   const derivedGender = (gender ? gender.toLowerCase() : null) || genderFromPath;
   const derivedCategory = category || pathSegments[1] || null;
-  const urlParams = new URLSearchParams(location.search || '');
-  const subCategoryFromQuery = urlParams.get('subCategory')?.trim() || null;
+
+  // Fetch nav categories for story-style subcategory strip
+  useEffect(() => {
+    const fetchNav = async () => {
+      try {
+        const res = await categoriesAPI.getCategories();
+        if (res.success && res.data?.categories?.length) {
+          setNavCategories(res.data.categories);
+        }
+      } catch (e) {
+        console.error('Failed to load nav categories:', e);
+      }
+    };
+    fetchNav();
+  }, []);
 
   // 1. Initial Data Fetch
   useEffect(() => {
@@ -52,16 +66,7 @@ const CategoryPage = () => {
   useEffect(() => {
     let filtered = [...allProducts];
 
-    // Subcategory from URL for /watches and /accessories (e.g. ?subCategory=analog)
-    if ((pathname === '/watches' || pathname === '/accessories') && subCategoryFromQuery) {
-      const expected = subCategoryFromQuery.toLowerCase().trim().replace(/-/g, '');
-      filtered = filtered.filter(product => {
-        const productSub = (product.subCategory || product.subcategory || '').toLowerCase().trim().replace(/-/g, '');
-        return productSub === expected;
-      });
-    }
-
-    // Subcategory Filtering for /men/:category and /women/:category
+    // Subcategory Filtering
     if (derivedGender && derivedCategory) {
       const categoryMap = {
         'shirt': { subCategory: 'shirt', displayName: 'Shirt' },
@@ -131,7 +136,7 @@ const CategoryPage = () => {
 
     setFilteredList(filtered);
     setPage(1); // Reset to page 1 when filters change
-  }, [allProducts, filters, derivedGender, derivedCategory, pathname, subCategoryFromQuery]);
+  }, [allProducts, filters, derivedGender, derivedCategory]);
 
   // Reset to page 1 when filter visibility changes (items per page changes)
   useEffect(() => {
@@ -301,11 +306,22 @@ const CategoryPage = () => {
   };
 
   const normalizeProduct = (product) => {
+    let images = product.images;
+    if (images && !Array.isArray(images) && typeof images === 'object') {
+      const keys = Object.keys(images).filter((k) => images[k] && typeof images[k] === 'string' && images[k].trim() !== '');
+      keys.sort((a, b) => (parseInt(String(a).replace(/\D/g, ''), 10) || 0) - (parseInt(String(b).replace(/\D/g, ''), 10) || 0));
+      images = keys.map((k) => images[k].trim());
+    }
+    if (!Array.isArray(images)) images = [];
+    if (images.length === 0 && (product.image || product.thumbnail)) {
+      images = [product.image || product.thumbnail].filter(Boolean);
+    }
+    const firstImage = images[0] || product.image || product.thumbnail;
     return {
       ...product,
       id: product._id || product.id,
-      images: product.images || [product.image || product.thumbnail],
-      image: product.images?.[0] || product.image || product.thumbnail,
+      images,
+      image: firstImage,
       price: product.finalPrice || product.price,
       originalPrice: product.originalPrice || product.mrp || product.price,
       rating: product.rating || 0,
@@ -313,6 +329,15 @@ const CategoryPage = () => {
       category: product.category,
     };
   };
+
+  // Current nav category and subItems for story-style strip (pathname + search match)
+  const categoryStrip = useMemo(() => {
+    const currentFull = pathname + (location.search || '');
+    const candidates = navCategories.filter((l) => (l.path || '').split('?')[0] === pathname);
+    const link = candidates.find((l) => currentFull === l.path || currentFull.startsWith(l.path + '&')) || candidates[0];
+    if (!link || !link.subItems?.length) return null;
+    return { label: link.label, path: link.path, subItems: link.subItems };
+  }, [pathname, location.search, navCategories]);
 
   const brands = useMemo(() => {
     const brandSet = new Set();
@@ -422,6 +447,36 @@ const CategoryPage = () => {
           </button>
           </div>
         </div>
+
+        {/* Story-style subcategory strip (above products) */}
+        {categoryStrip && (
+          <div className="mb-6 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+            <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+              <Link
+                to={categoryStrip.path}
+                className={`flex-shrink-0 snap-start px-5 py-2.5 rounded-2xl text-sm font-semibold border-2 transition-all whitespace-nowrap
+                  ${(location.pathname + (location.search || '')) === categoryStrip.path || (!location.search && categoryStrip.path === location.pathname)
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}`}
+              >
+                All
+              </Link>
+              {categoryStrip.subItems.map((sub, idx) => {
+                const isActive = (location.pathname + (location.search || '')) === (sub.path || '');
+                return (
+                  <Link
+                    key={idx}
+                    to={sub.path || '#'}
+                    className={`flex-shrink-0 snap-start px-5 py-2.5 rounded-2xl text-sm font-semibold border-2 transition-all whitespace-nowrap
+                      ${isActive ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}`}
+                  >
+                    {sub.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
         
         <div className="flex gap-6 relative">
           {/* Filter Sidebar */}

@@ -122,7 +122,10 @@ const buildOldWatchQuery = (reqQuery) => {
   }
 
   if (reqQuery.subCategory) {
-    query.subCategory = reqQuery.subCategory;
+    const normalized = (reqQuery.subCategory || '').toString().trim();
+    if (normalized) {
+      query.subCategory = { $regex: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+    }
   }
 
   if (reqQuery.isNewArrival === 'true') {

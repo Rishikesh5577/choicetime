@@ -16,23 +16,31 @@ const ProductCard = ({ product }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
 
-  // Data Normalization
-  // Handle images - support both array and object formats
+  // Data Normalization - support array, object { image1, image2, ... }, or single image/thumbnail
   let productImages = [];
   if (product.images) {
     if (Array.isArray(product.images)) {
-      productImages = product.images.filter(img => img && img.trim() !== '');
+      productImages = product.images.filter(img => img && typeof img === 'string' && img.trim() !== '');
     } else if (typeof product.images === 'object') {
-      // Convert object format {image1: "url", image2: "url"} to array
-      productImages = Object.values(product.images).filter(img => img && typeof img === 'string' && img.trim() !== '');
+      const keys = Object.keys(product.images).filter(k => product.images[k] && typeof product.images[k] === 'string' && product.images[k].trim() !== '');
+      keys.sort((a, b) => {
+        const nA = parseInt(String(a).replace(/\D/g, ''), 10) || 0;
+        const nB = parseInt(String(b).replace(/\D/g, ''), 10) || 0;
+        return nA - nB;
+      });
+      productImages = keys.map(k => product.images[k].trim());
     }
   }
-  
-  // Fallback to image or thumbnail if images array is empty
   if (productImages.length === 0) {
-    const fallbackImage = product.image || product.thumbnail || product.images?.image1;
-    if (fallbackImage) {
-      productImages = [fallbackImage];
+    const fallbackImage =
+      product.image ||
+      product.thumbnail ||
+      (product.images && product.images.image1) ||
+      (product.images && product.images.image2) ||
+      (product.images && product.images.image3) ||
+      (product.images && product.images.image4);
+    if (fallbackImage && typeof fallbackImage === 'string' && fallbackImage.trim() !== '') {
+      productImages = [fallbackImage.trim()];
     }
   }
   
