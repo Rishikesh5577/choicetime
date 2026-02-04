@@ -205,13 +205,11 @@ const SpecialCollection = ({ type }) => {
 
         <div className="flex gap-6 relative">
           <div
-            className={`${
-              showMobileFilters ? 'block' : 'hidden'
-            } lg:block w-full lg:w-64 flex-shrink-0 ${
-              showMobileFilters
+            className={`${showMobileFilters ? 'block' : 'hidden'
+              } lg:block w-full lg:w-64 flex-shrink-0 ${showMobileFilters
                 ? 'fixed inset-0 z-50 bg-white p-4 overflow-y-auto lg:relative lg:z-auto lg:bg-transparent lg:p-0'
                 : ''
-            }`}
+              }`}
           >
             {showMobileFilters && (
               <div className="lg:hidden flex items-center justify-between mb-4">

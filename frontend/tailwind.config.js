@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        'theme-bg': '#F7F4EE',
+      },
       // Animation definitions go here inside 'extend'
       animation: {
         fadeIn: 'fadeIn 0.5s ease-in-out',

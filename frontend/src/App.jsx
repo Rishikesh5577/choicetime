@@ -44,9 +44,9 @@ function AppContent() {
   }, [location.pathname, location.search]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F7F4EE] flex flex-col">
       {!isAdminRoute && <Navbar />}
-      <main className="flex-grow">
+      <main className="flex-grow pt-[33px] md:pt-[73px]">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/men" element={<CategoryPage />} />
@@ -92,17 +92,17 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary>
-    <AuthProvider>
-      <CartProvider>
+      <AuthProvider>
+        <CartProvider>
           <WishlistProvider>
             <ToastProvider>
-        <Router>
-          <AppContent />
-        </Router>
+              <Router>
+                <AppContent />
+              </Router>
             </ToastProvider>
           </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+        </CartProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

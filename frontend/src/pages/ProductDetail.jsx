@@ -581,12 +581,12 @@ const ProductDetail = () => {
     const container = ref.current;
     const firstCard = container.querySelector('.flex-shrink-0');
     if (!firstCard) return;
-    
+
     // Get actual card width including gap
     const cardWidth = firstCard.offsetWidth;
     const gap = 16; // gap-4 = 16px
     const scrollAmount = cardWidth + gap;
-    
+
     container.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth'
@@ -654,7 +654,7 @@ const ProductDetail = () => {
     <>
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
           {/* Back Button */}

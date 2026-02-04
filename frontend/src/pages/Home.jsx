@@ -21,7 +21,7 @@ const fetchFreshDrops = async () => {
       productAPI.getLenses({ limit: 10 }),
       productAPI.getLenses({ limit: 10, gender: 'men' })
     ]);
-    
+
     // Combine shoes from men and women, take exactly 12
     let allShoes = [];
     if (menShoes.success && menShoes.data.products) {
@@ -31,27 +31,27 @@ const fetchFreshDrops = async () => {
       allShoes = [...allShoes, ...womenShoes.data.products];
     }
     const shoes = allShoes.slice(0, 12);
-    
+
     // Get exactly 10 accessories
-    const acc = accessories.success && accessories.data.products 
-      ? accessories.data.products.slice(0, 10) 
+    const acc = accessories.success && accessories.data.products
+      ? accessories.data.products.slice(0, 10)
       : [];
-    
+
     // Get exactly 10 watches
-    const watch = watches.success && watches.data.products 
-      ? watches.data.products.slice(0, 10) 
+    const watch = watches.success && watches.data.products
+      ? watches.data.products.slice(0, 10)
       : [];
-    
+
     // Get exactly 10 lenses
-    const lens = lenses.success && lenses.data.products 
-      ? lenses.data.products.slice(0, 10) 
+    const lens = lenses.success && lenses.data.products
+      ? lenses.data.products.slice(0, 10)
       : [];
-    
+
     // Get exactly 10 men's lenses
-    const mensLens = mensLenses.success && mensLenses.data.products 
-      ? mensLenses.data.products.slice(0, 10) 
+    const mensLens = mensLenses.success && mensLenses.data.products
+      ? mensLenses.data.products.slice(0, 10)
       : [];
-    
+
     // Combine all: 12 shoes + 10 accessories + 10 watches + 10 lenses + 10 men's lenses = 52 products total
     return [...shoes, ...acc, ...watch, ...lens, ...mensLens];
   } catch (error) {
@@ -94,7 +94,7 @@ const fetchAccessories = async () => {
     console.error("Error fetching accessories:", error);
     return [];
   }
-};  
+};
 
 const LuxeSection = () => {
   const scrollRef = useRef(null);
@@ -152,7 +152,7 @@ const NewsTicker = () => {
 
   return (
     <>
-    
+
       <style>
         {`
             @keyframes marquee {
@@ -215,10 +215,7 @@ const Home = () => {
   }, []);
 
   const carouselSlides = [
-    { image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765179209/62987769-6299-4622-965f-168e87ee3572.png', link: '/watches' },
-    { image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765186313/12de4e83-d480-42c3-ad1d-7078f5d19074.png', link: '/men' },
-    { image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765179353/3f1d3d63-ed99-45d8-af35-94c5cdab655c.png', link: '/women' },
-    { image: 'https://cmsimages.shoppersstop.com/main_pb_main_web_e1bd1656a9/main_pb_main_web_e1bd1656a9.png', link: '/sale' }
+    { image: 'https://res.cloudinary.com/dvkxgrcbv/image/upload/v1765795400/Black_Bold_Texts_Login_Page_Wireframe_Website_UI_Prototype_2048_x_594_px_1_morepy.svg', link: '/' }
   ];
 
   // --- CAROUSEL LOGIC ---
@@ -234,10 +231,10 @@ const Home = () => {
   const goToSlide = (index) => setCurrentSlide(index);
 
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-800 mt-">
-      
+    <div className="min-h-screen bg-[#F7F4EE] font-sans text-gray-800">
+
       {/* --- HERO SECTION (Restored & Top Margin Removed) --- */}
-      <div className="relative w-full bg-gray-50 overflow-hidden group">
+      <div className="relative w-full bg-[#f7f4ee] overflow-hidden group">
         <div className="hidden lg:block relative w-full">
           <div className="relative w-full max-w-[2000px] mx-auto aspect-[21/9] md:aspect-[3/1]">
             {carouselSlides.map((slide, index) => (
@@ -357,7 +354,7 @@ const Home = () => {
       </section> */}
 
       {/* --- PRODUCT CATEGORIES (Men's / Women's Watches, Wallet, Belt) --- */}
-      <section className="py-12 md:py-16 mb-20 bg-stone-50">
+      <section className="py-12 md:py-16 mb-20 bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
             Product Categories
@@ -394,98 +391,7 @@ const Home = () => {
       </section>
 
 
-      <div className="w-fit m-0 p-0 leading-none overflow-visible h-auto w-auto">
-        <img
-          src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765186209/83d30f87-eb70-4315-8291-e1880c206991.png"
-          alt="Full size"
-          className="block w-auto h-auto m-0 p-0 border-none outline-none"
-        />
-      </div>
-      {/* <div className="w-fit m-0 p-0 leading-none overflow-visible h-auto w-auto hidden lg:block">
-        <img
-          src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765186240/d347cf32-1980-4355-9ac5-9168cf727263.png"
-          alt="Full size"
-          className="block w-auto h-auto m-0 p-0 border-none outline-none"
-        />
-      </div> */}
 
-
-
-      {/* --- PRODUCT SECTIONS (Improved Headers and Buttons) --- */}
-
-      <ProductSection
-        title="Fresh Drops"
-        subtitle="Be the first to wear the trend"
-        products={freshDrops}
-        viewAllLink="/men/shoes"
-        isLoading={isLoading}
-      />
-      <div className="w-fit m-0 p-0 leading-none overflow-visible h-auto w-auto hidden lg:block">
-        <h2 className='m-5 text-start text-2xl font-bold'>Coming soon...</h2>
-        <img
-          src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765187037/ce43b64f-3f08-4346-ad66-1f7306b1006f.png"
-          alt="Full size"
-          className="block w-auto h-auto m-0 p-0 border-none outline-none"
-        />
-      </div>
-
-      <div className="w-fit m-0 p-0 leading-none overflow-visible h-auto w-auto lg:hidden">
-        <img
-          src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765137210/Black_Elegant_Watch_Special_Offer_Instagram_Post_y3foz1.svg"
-          alt="Full size"
-          className="block w-auto h-auto m-0 p-0 border-none outline-none"
-        />
-      </div>
-
-
-
-      {/* <ProductSection
-        title="Steal Deals"
-        subtitle="Premium styles at unbeatable prices"
-        products={saleItems}
-        viewAllLink="/sale"
-        bgColor="bg-gradient-to-br from-gray-50 to-white"
-        isLoading={isLoading}
-      /> */}
-
-      {/* 3. Men & Women - Grid Layout */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-2 gap-4 lg:gap-12">
-          <div className="bg-gray-100 p-6 border border-gray-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-extrabold text-gray-900">For Him</h2>
-              <Link to="/men" className="text-sm font-semibold text-gray-700 hover:text-gray-900 transition">View All</Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {isLoading ? [1, 2].map(i => <SkeletonCard key={i} />) : menItems.map(p => <ProductCard key={p._id} product={p} />)}
-            </div>
-          </div>
-          <div className="bg-pink-50 p-6 border border-pink-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-extrabold text-pink-600">For Her</h2>
-              <Link to="/women" className="text-sm font-semibold text-pink-600 hover:text-pink-800 transition">View All</Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {isLoading ? [1, 2].map(i => <SkeletonCard key={i} />) : womenItems.map(p => <ProductCard key={p._id} product={p} />)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 mt-12 mb-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-900">Featured Collections</h2>
-          <p className="text-gray-500">Essential styles for him and her.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          <Link to="/women/shirt" className="block w-full overflow-hidden rounded-xl duration-300 group">
-            <img src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1763492921/Black_and_White_Modern_New_Arrivals_Blog_Banner_4_x9v1lw.png" alt="Women" className="w-full h-auto block transform group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-          </Link>
-          <Link to="/men/shirt" className="block w-full overflow-hidden duration-300 group">
-            <img src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1763493394/5ad7474b-2e60-47c5-b993-cdc9c1449c08.png" alt="Men" className="w-full h-auto block transform group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-          </Link>
-        </div>
-      </div>
     </div>
   );
 };
@@ -494,7 +400,7 @@ const Home = () => {
 
 const SkeletonCard = () => <div className="h-64 bg-gray-200 animate-pulse rounded-xl"></div>;
 
-const ProductSection = ({ title, subtitle, products, viewAllLink, bgColor = 'bg-white', isLoading }) => {
+const ProductSection = ({ title, subtitle, products, viewAllLink, bgColor = 'bg-[#F7F4EE]', isLoading }) => {
   return (
     <section className={`py-16 ${bgColor}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

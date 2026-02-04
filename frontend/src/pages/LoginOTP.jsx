@@ -1,7 +1,7 @@
 // src/pages/Login-otp.jsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authAPI } from '../utils/api'; 
+import { authAPI } from '../utils/api';
 
 const LeftIcon = ({ children }) => (
   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -26,10 +26,10 @@ const LoginOTP = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    
+
     // Clean phone number (remove non-digits)
     const cleanPhone = phoneNumber.replace(/\D/g, '');
-    
+
     if (cleanPhone.length !== 10) {
       setError("Please enter a valid 10-digit phone number");
       return;
@@ -39,7 +39,7 @@ const LoginOTP = () => {
 
     try {
       const response = await authAPI.sendOTP(cleanPhone);
-      
+
       if (response.success) {
         setExpandForm(true);
         setSuccess('OTP sent successfully! Please check your phone.');
@@ -82,17 +82,17 @@ const LoginOTP = () => {
       const cleanPhone = phoneNumber.replace(/\D/g, '');
       // Send name and email only if it's a new user
       const response = await authAPI.verifyOTP(
-        cleanPhone, 
-        otp, 
-        isNewUser ? name : null, 
+        cleanPhone,
+        otp,
+        isNewUser ? name : null,
         isNewUser ? email : null
       );
-      
+
       if (response.success) {
         // Store token and user data
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        
+
         // Reload to update auth state
         window.location.href = '/';
       } else {
@@ -107,12 +107,12 @@ const LoginOTP = () => {
       }
     } catch (err) {
       setIsLoading(false);
-      
+
       // Check if error has response data
       const errorData = err.response?.data || {};
       const errorMessage = errorData.message || err.message || "Invalid OTP. Please check and try again.";
       const needsRegistration = errorData.requiresRegistration || errorMessage.includes('registration requires');
-      
+
       // If error says user needs registration, show the form
       if (needsRegistration) {
         setIsNewUser(true);
@@ -129,7 +129,7 @@ const LoginOTP = () => {
   return (
     <div className="fixed inset-0 z-50 flex min-h-screen bg-white font-sans">
       {/* Left Side */}
-      <div 
+      <div
         className="hidden lg:flex flex-col justify-between w-[45%] p-12 text-white relative overflow-hidden bg-cover bg-center"
         style={{ backgroundImage: "url('https://res.cloudinary.com/de1bg8ivx/image/upload/v1765192160/1_08426779-951c-47b7-9feb-ef29ca85b27c_frapuz.webp')" }}
       >
@@ -139,8 +139,8 @@ const LoginOTP = () => {
             {/* Professional E-commerce Logo */}
             <div className="relative">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.15)"/>
-                <path d="M12 18C12 15.5 13.5 14 16 14C18.5 14 20 15.5 20 17C20 18.5 18.5 19.5 17 20C15.5 20.5 14 21.5 14 23C14 25.5 15.5 27 18 27C20.5 27 22 25.5 22 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.15)" />
+                <path d="M12 18C12 15.5 13.5 14 16 14C18.5 14 20 15.5 20 17C20 18.5 18.5 19.5 17 20C15.5 20.5 14 21.5 14 23C14 25.5 15.5 27 18 27C20.5 27 22 25.5 22 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
             </div>
             <div>
@@ -177,7 +177,7 @@ const LoginOTP = () => {
                 <p>{error}</p>
               </div>
             )}
-            
+
             {success && (
               <div className="bg-green-50 border-l-4 border-green-500 p-4 text-sm text-green-700">
                 <p>{success}</p>
@@ -273,7 +273,7 @@ const LoginOTP = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Show checkbox only if not already a new user */}
                   {!isNewUser && (
                     <div className="flex items-center p-2">

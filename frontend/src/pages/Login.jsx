@@ -67,7 +67,7 @@ const Login = () => {
 
   return (
     // Fixed container to cover the entire screen (hiding Navbar/Footer)
-    <div className="fixed inset-0 z-50 flex min-h-screen bg-white font-sans">
+    <div className="fixed inset-0 z-50 flex min-h-screen bg-[#F7F4EE] font-sans">
 
       {/* LEFT SIDE: Branding with Background Image */}
       <div
@@ -89,8 +89,8 @@ const Login = () => {
             {/* Professional E-commerce Logo */}
             <div className="relative">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.15)"/>
-                <path d="M12 18C12 15.5 13.5 14 16 14C18.5 14 20 15.5 20 17C20 18.5 18.5 19.5 17 20C15.5 20.5 14 21.5 14 23C14 25.5 15.5 27 18 27C20.5 27 22 25.5 22 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.15)" />
+                <path d="M12 18C12 15.5 13.5 14 16 14C18.5 14 20 15.5 20 17C20 18.5 18.5 19.5 17 20C15.5 20.5 14 21.5 14 23C14 25.5 15.5 27 18 27C20.5 27 22 25.5 22 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
             </div>
             <div>
@@ -110,7 +110,7 @@ const Login = () => {
       </div>
 
       {/* RIGHT SIDE: Login Form */}
-      <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8 lg:p-16 overflow-y-auto bg-white">
+      <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8 lg:p-16 overflow-y-auto bg-[#F7F4EE]">
         <div className="w-full max-w-md space-y-8">
 
           <div className="text-center lg:text-left">

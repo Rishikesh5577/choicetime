@@ -18,17 +18,17 @@ const OrderSuccess = () => {
   const [loadingOrder, setLoadingOrder] = useState(false);
   const paymentMethod = searchParams.get('method') || 'COD';
   const orderId = searchParams.get('orderId') || '';
-  
+
   // Generate order number from orderId or create a random one
   const orderNumber = orderId ? orderId.slice(-8).toUpperCase() : `ORD${Date.now().toString().slice(-8)}`;
-  
+
   // Calculate estimated delivery date (5-7 days from now)
   const estimatedDelivery = new Date();
   estimatedDelivery.setDate(estimatedDelivery.getDate() + Math.floor(Math.random() * 3) + 5); // 5-7 days
-  
+
   // Get order total from localStorage (stored before cart is cleared)
   const [orderTotal, setOrderTotal] = useState(0);
-  
+
   // Fetch order details if orderId is available
   useEffect(() => {
     if (orderId) {
@@ -48,7 +48,7 @@ const OrderSuccess = () => {
       fetchOrder();
     }
   }, [orderId]);
-  
+
   useEffect(() => {
     const storedTotal = localStorage.getItem('lastOrderTotal');
     if (storedTotal) {
@@ -98,32 +98,31 @@ const OrderSuccess = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center px-4 py-12 transition-opacity duration-300"
       style={{
         opacity: isVisible ? 1 : 0
       }}
     >
-      <div 
-        className={`max-w-lg w-full bg-white rounded-3xl shadow-2xl p-8 sm:p-10 text-center transform transition-all duration-500 ${
-          isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'
-        }`}
+      <div
+        className={`max-w-lg w-full bg-white rounded-3xl shadow-2xl p-8 sm:p-10 text-center transform transition-all duration-500 ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'
+          }`}
       >
         {/* Animated Success Icon */}
         <div className="flex justify-center mb-6">
-          <div 
+          <div
             className="w-24 h-24 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center relative transform transition-all duration-700"
             style={{
               animation: 'successPulse 2s ease-in-out infinite'
             }}
           >
-            <div 
+            <div
               className="absolute inset-0 bg-green-200 rounded-full opacity-0"
               style={{
                 animation: 'ripple 2s ease-out infinite'
               }}
             ></div>
-            <CheckCircle 
+            <CheckCircle
               className="w-14 h-14 text-green-600 relative z-10 transform transition-all duration-700"
               style={{
                 animation: 'checkmarkDraw 0.8s ease-out 0.3s both'
@@ -133,7 +132,7 @@ const OrderSuccess = () => {
         </div>
 
         {/* Success Message with Order Number */}
-        <h1 
+        <h1
           className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.2s both'
@@ -141,9 +140,9 @@ const OrderSuccess = () => {
         >
           Order Placed Successfully! 🎉
         </h1>
-        
+
         {/* Order Number */}
-        <div 
+        <div
           className="mb-4 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.3s both'
@@ -155,8 +154,8 @@ const OrderSuccess = () => {
             <span className="text-sm font-bold text-gray-900">#{orderNumber}</span>
           </div>
         </div>
-        
-        <p 
+
+        <p
           className="text-gray-600 mb-6 text-lg transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.4s both'
@@ -164,9 +163,9 @@ const OrderSuccess = () => {
         >
           Your order has been confirmed and will be processed shortly.
         </p>
-        
+
         {/* Order Details Cards */}
-        <div 
+        <div
           className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.5s both'
@@ -179,15 +178,15 @@ const OrderSuccess = () => {
               <span className="text-xs font-semibold text-blue-900 uppercase">Estimated Delivery</span>
             </div>
             <p className="text-sm font-semibold text-blue-700">
-              {estimatedDelivery.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'short', 
-                day: 'numeric' 
+              {estimatedDelivery.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric'
               })}
             </p>
             <p className="text-xs text-blue-600 mt-1">5-7 business days</p>
           </div>
-          
+
           {/* Payment Method */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -202,10 +201,10 @@ const OrderSuccess = () => {
             )}
           </div>
         </div>
-        
+
         {/* Order Receipt Summary */}
         {orderTotal > 0 && (
-          <div 
+          <div
             className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 transform transition-all duration-500"
             style={{
               animation: 'fadeInUp 0.6s ease-out 0.6s both'
@@ -233,7 +232,7 @@ const OrderSuccess = () => {
         )}
 
         {/* Order Timeline */}
-        <div 
+        <div
           className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.7s both'
@@ -270,7 +269,7 @@ const OrderSuccess = () => {
         </div>
 
         {/* Auto-redirect notice with animated countdown */}
-        <div 
+        <div
           className="mb-6 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.8s both'
@@ -286,7 +285,7 @@ const OrderSuccess = () => {
           </div>
           {/* Progress bar */}
           <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-            <div 
+            <div
               className="bg-gradient-to-r from-green-500 to-green-600 h-1.5 rounded-full transition-all duration-1000 ease-linear"
               style={{
                 width: `${((10 - countdown) / 10) * 100}%`
@@ -296,7 +295,7 @@ const OrderSuccess = () => {
         </div>
 
         {/* Action Buttons with Hover Effects */}
-        <div 
+        <div
           className="space-y-3 transform transition-all duration-500"
           style={{
             animation: 'fadeInUp 0.6s ease-out 0.9s both'
@@ -342,8 +341,8 @@ const OrderSuccess = () => {
             </div>
             <div className="p-6">
               {order ? (
-                <Invoice 
-                  order={order} 
+                <Invoice
+                  order={order}
                   user={user}
                   onPrint={() => window.print()}
                 />

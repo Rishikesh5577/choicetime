@@ -42,7 +42,7 @@ const Checkout = () => {
       navigate('/cart');
       return;
     }
-    
+
     // Load user profile to get saved address
     const loadUserProfile = async () => {
       try {
@@ -66,7 +66,7 @@ const Checkout = () => {
         console.error('Error loading user profile:', error);
       }
     };
-    
+
     loadUserProfile();
   }, [isAuthenticated, cart.length, navigate, isPlacingOrder]);
 
@@ -160,32 +160,32 @@ const Checkout = () => {
         setIsProcessingOrder(true);
         setLoading(true);
         setProcessingStep(0);
-        
+
         // Step 1: Validating order details (2 seconds)
         setProcessingStep(1);
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Step 2: Processing payment method (6 seconds)
         setProcessingStep(2);
         await new Promise(resolve => setTimeout(resolve, 6000));
-        
+
         // Step 3: Confirming order (5 seconds)
         setProcessingStep(3);
         await new Promise(resolve => setTimeout(resolve, 5000));
-        
+
         // Step 4: Creating order (3 seconds delay before API call, then API call)
         setProcessingStep(4);
         await new Promise(resolve => setTimeout(resolve, 3000));
         const response = await orderAPI.createOrder(shippingAddress, 'COD');
-        
+
         if (response.success) {
           // Store order data
           setOrderData(response.data?.order);
-          
+
           // Step 5: Order confirmed (2 seconds)
           setProcessingStep(5);
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           setIsProcessingOrder(false);
           setLoading(false);
           setShowSuccessModal(true);
@@ -194,7 +194,7 @@ const Checkout = () => {
           // Store order total in localStorage for success page
           const orderTotal = getCartTotal();
           localStorage.setItem('lastOrderTotal', orderTotal.toString());
-          
+
           // Navigate to success page after showing the modal with smooth transition
           setTimeout(() => {
             setShowSuccessModal(false);
@@ -217,7 +217,7 @@ const Checkout = () => {
       // Handle Razorpay payment
       // Load Razorpay script
       const scriptLoaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-      
+
       if (!scriptLoaded) {
         throw new Error('Failed to load payment gateway. Please refresh the page and try again.');
       }
@@ -304,8 +304,8 @@ const Checkout = () => {
   }
 
   return (
-    <div 
-      className="min-h-screen bg-gray-50 transition-opacity duration-300 overflow-x-hidden"
+    <div
+      className="min-h-screen bg-[#F7F4EE] transition-opacity duration-300 overflow-x-hidden"
       style={{
         opacity: showSuccessModal ? 0.3 : 1,
         pointerEvents: showSuccessModal ? 'none' : 'auto',
@@ -332,7 +332,7 @@ const Checkout = () => {
 
         {/* Success Modal with Smooth Animations */}
         {showSuccessModal && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             style={{
               animation: 'fadeIn 0.3s ease-out'
@@ -342,7 +342,7 @@ const Checkout = () => {
               e.stopPropagation();
             }}
           >
-            <div 
+            <div
               className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center transform transition-all duration-300"
               style={{
                 animation: 'slideUp 0.4s ease-out'
@@ -350,13 +350,13 @@ const Checkout = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center mb-4">
-                <div 
+                <div
                   className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center transform transition-all duration-500"
                   style={{
                     animation: 'scaleIn 0.5s ease-out, pulse 2s ease-in-out infinite'
                   }}
                 >
-                  <Check 
+                  <Check
                     className="w-12 h-12 text-green-600 transform transition-all duration-500"
                     style={{
                       animation: 'checkmark 0.6s ease-out 0.3s both'
@@ -364,7 +364,7 @@ const Checkout = () => {
                   />
                 </div>
               </div>
-              <h2 
+              <h2
                 className="text-2xl font-bold text-gray-900 mb-2 transform transition-all duration-500"
                 style={{
                   animation: 'fadeInUp 0.5s ease-out 0.2s both'
@@ -372,7 +372,7 @@ const Checkout = () => {
               >
                 Order Placed Successfully!
               </h2>
-              <p 
+              <p
                 className="text-gray-600 mb-6 transform transition-all duration-500"
                 style={{
                   animation: 'fadeInUp 0.5s ease-out 0.3s both'
@@ -473,15 +473,13 @@ const Checkout = () => {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Placing Your Order</h3>
                 <p className="text-sm text-gray-600 mb-6">Please wait while we process your order...</p>
-                
+
                 {/* Processing Steps */}
                 <div className="space-y-3 text-left">
-                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                    processingStep >= 1 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                      processingStep >= 1 ? 'bg-green-600' : 'bg-gray-300'
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${processingStep >= 1 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                     }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${processingStep >= 1 ? 'bg-green-600' : 'bg-gray-300'
+                      }`}>
                       {processingStep > 1 ? (
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -492,19 +490,16 @@ const Checkout = () => {
                         <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium transition-colors ${
-                      processingStep >= 1 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
+                    <span className={`text-sm font-medium transition-colors ${processingStep >= 1 ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
                       Validating order details
                     </span>
                   </div>
-                  
-                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                    processingStep >= 2 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                      processingStep >= 2 ? 'bg-green-600' : 'bg-gray-300'
+
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${processingStep >= 2 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                     }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${processingStep >= 2 ? 'bg-green-600' : 'bg-gray-300'
+                      }`}>
                       {processingStep > 2 ? (
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -515,19 +510,16 @@ const Checkout = () => {
                         <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium transition-colors ${
-                      processingStep >= 2 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
+                    <span className={`text-sm font-medium transition-colors ${processingStep >= 2 ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
                       Processing payment method
                     </span>
                   </div>
-                  
-                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                    processingStep >= 3 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                      processingStep >= 3 ? 'bg-green-600' : 'bg-gray-300'
+
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${processingStep >= 3 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                     }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${processingStep >= 3 ? 'bg-green-600' : 'bg-gray-300'
+                      }`}>
                       {processingStep > 3 ? (
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -538,19 +530,16 @@ const Checkout = () => {
                         <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium transition-colors ${
-                      processingStep >= 3 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
+                    <span className={`text-sm font-medium transition-colors ${processingStep >= 3 ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
                       Confirming order
                     </span>
                   </div>
-                  
-                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                    processingStep >= 4 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                      processingStep >= 4 ? 'bg-green-600' : 'bg-gray-300'
+
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${processingStep >= 4 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                     }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${processingStep >= 4 ? 'bg-green-600' : 'bg-gray-300'
+                      }`}>
                       {processingStep > 4 ? (
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -561,19 +550,16 @@ const Checkout = () => {
                         <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium transition-colors ${
-                      processingStep >= 4 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
+                    <span className={`text-sm font-medium transition-colors ${processingStep >= 4 ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
                       Creating order
                     </span>
                   </div>
-                  
-                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                    processingStep >= 5 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                      processingStep >= 5 ? 'bg-green-600' : 'bg-gray-300'
+
+                  <div className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${processingStep >= 5 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
                     }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${processingStep >= 5 ? 'bg-green-600' : 'bg-gray-300'
+                      }`}>
                       {processingStep >= 5 ? (
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -582,9 +568,8 @@ const Checkout = () => {
                         <div className="w-2.5 h-2.5 bg-gray-400 rounded-full"></div>
                       )}
                     </div>
-                    <span className={`text-sm font-medium transition-colors ${
-                      processingStep >= 5 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>
+                    <span className={`text-sm font-medium transition-colors ${processingStep >= 5 ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
                       Order confirmed
                     </span>
                   </div>
@@ -704,7 +689,7 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-                
+
                 {/* Save Address Button */}
                 <div className="pt-4 border-t border-gray-200">
                   <button
@@ -789,7 +774,7 @@ const Checkout = () => {
                       ? 'border-gray-900 bg-gray-50' 
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}> */}
-                    {/* <input
+                  {/* <input
                       type="radio"
                       name="paymentMethod"
                       value="razorpay"
@@ -797,16 +782,15 @@ const Checkout = () => {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
                     /> */}
-                    {/* <div className="flex-1">
+                  {/* <div className="flex-1">
                       <div className="text-sm font-medium text-gray-900">Online Payment</div>
                       <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Wallets</div>
                     </div> */}
                   {/* </label> */}
-                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                    paymentMethod === 'COD' 
-                      ? 'border-gray-900 bg-gray-50' 
+                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${paymentMethod === 'COD'
+                      ? 'border-gray-900 bg-gray-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -888,7 +872,7 @@ const Checkout = () => {
               </button>
             </div>
             <div className="p-6">
-              <Invoice 
+              <Invoice
                 order={{
                   items: cart.map(item => ({
                     product: item.product || item,
@@ -902,7 +886,7 @@ const Checkout = () => {
                   paymentMethod: paymentMethod,
                   orderDate: new Date(),
                   status: 'pending',
-                }} 
+                }}
                 user={user}
               />
             </div>

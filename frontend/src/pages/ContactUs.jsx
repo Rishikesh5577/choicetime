@@ -47,7 +47,7 @@ const ContactUs = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Get in Touch</h2>
-              
+
               <div className="space-y-6">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
@@ -111,7 +111,7 @@ const ContactUs = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Send us a Message</h2>
-              
+
               {submitted ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                   <svg className="w-12 h-12 text-green-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
