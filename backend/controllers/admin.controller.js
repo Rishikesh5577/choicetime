@@ -1,158 +1,31 @@
 import User from '../models/User.js';
 import Order from '../models/Order.js';
-import Men from '../models/product/menModel.js';
-import MenTshirt from '../models/product/menTshirt.model.js';
-import Women from '../models/product/womenModel.js';
-import Watch from '../models/product/watch.model.js';
-import WatchNew from '../models/product/watchNew.model.js';
-import Lens from '../models/product/lens.model.js';
-import Accessory from '../models/product/accessory.model.js';
-import Shoes from '../models/product/shoes.model.js';
-import Saree from '../models/product/saree.model.js';
+import Product from '../models/Product.js';
 import Category from '../models/Category.js';
-
-const productModelMap = {
-  men: Men,
-  'men-tshirt': MenTshirt,
-  'MenTshirt': MenTshirt,
-  'Tshirts': MenTshirt,
-  'Tshirt': MenTshirt,
-  women: Women,
-  watch: Watch,
-  watches: Watch,
-  'watch-new': WatchNew,
-  'WATCH': WatchNew,
-  'WATCHES': WatchNew,
-  lens: Lens,
-  lenses: Lens,
-  accessory: Accessory,
-  accessories: Accessory,
-  shoes: Shoes,
-  'Shoes': Shoes,
-  'Shoe': Shoes,
-  saree: Saree,
-  'Saree': Saree,
-  'SARI': Saree,
-  'sari': Saree,
-};
-
-const resolveProductModel = (category) => {
-  if (!category) {
-    throw new Error('Category is required');
-  }
-  // Check for exact match first (for WATCH/WATCHES)
-  const exactMatch = productModelMap[category];
-  if (exactMatch) {
-    return exactMatch;
-  }
-  // Then check lowercase
-  const key = category.toLowerCase();
-  const model = productModelMap[key];
-  if (!model) {
-    throw new Error(`Unsupported category: ${category}`);
-  }
-  return model;
-};
-
-const isWatchNewModel = (category) => {
-  if (!category) return false;
-  const c = category.toString().toUpperCase();
-  return c === 'WATCH' || c === 'WATCHES' || category === 'watch-new';
-};
-
-/** Build WatchNew document from admin payload (name, price, images array, etc.) */
-const buildWatchNewData = (productData, gender) => {
-  const imagesArr = Array.isArray(productData.images) ? productData.images : [];
-  const categoryId = productData.categoryId || (gender ? `${gender}-watches` : 'watches');
-  return {
-    title: productData.name || productData.title || '',
-    mrp: Number(productData.originalPrice ?? productData.price ?? productData.mrp ?? 0),
-    discountPercent: Number(productData.discountPercent ?? 0),
-    description: productData.description || '',
-    category: (productData.category || 'WATCH').toUpperCase(),
-    categoryId,
-    product_info: {
-      brand: productData.brand || '',
-      manufacturer: productData.manufacturer || '',
-      IncludedComponents: productData.IncludedComponents || '',
-    },
-    images: {
-      image1: (imagesArr[0] && typeof imagesArr[0] === 'string') ? imagesArr[0].trim() : '',
-      image2: (imagesArr[1] && typeof imagesArr[1] === 'string') ? imagesArr[1].trim() : '',
-      image3: (imagesArr[2] && typeof imagesArr[2] === 'string') ? imagesArr[2].trim() : '',
-      image4: (imagesArr[3] && typeof imagesArr[3] === 'string') ? imagesArr[3].trim() : '',
-    },
-    stock: Number(productData.stock ?? 0),
-    isNewArrival: Boolean(productData.isNewArrival),
-    onSale: Boolean(productData.onSale),
-    isFeatured: Boolean(productData.isFeatured),
-    inStock: (Number(productData.stock ?? 0)) > 0,
-    rating: Number(productData.rating ?? 0),
-    ratingsCount: Number(productData.ratingsCount ?? 0),
-    reviewsCount: Number(productData.reviewsCount ?? 0),
-  };
-};
 
 export const getDashboardSummary = async (req, res) => {
   try {
-    // Count all documents in each collection (includes duplicates, multiple entries, etc.)
-    // countDocuments() counts every document regardless of duplicates
     const [
       totalUsers,
       totalOrders,
       pendingOrders,
       totalRevenue,
-      menCount,
-      womenCount,
-      watchCount,
-      watchNewCount,
-      lensCount,
-      accessoryCount,
-      menTshirtCount,
-      shoesCount,
-      sareeCount,
+      totalProducts,
+      categoryCountsArr,
     ] = await Promise.all([
-      User.countDocuments(), // Count all user documents
-      Order.countDocuments(), // Count all order documents
+      User.countDocuments(),
+      Order.countDocuments(),
       Order.countDocuments({ status: 'pending' }),
       Order.aggregate([{ $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
-      Men.countDocuments(), // Count ALL men products (including duplicates)
-      Women.countDocuments(), // Count ALL women products (including duplicates)
-      Watch.countDocuments(), // Count ALL watch products (including duplicates)
-      WatchNew.countDocuments().catch(() => 0), // Count ALL new watch products (including duplicates)
-      Lens.countDocuments(), // Count ALL lens products (including duplicates)
-      Accessory.countDocuments(), // Count ALL accessory products (including duplicates)
-      MenTshirt.countDocuments().catch(() => 0), // Count ALL men t-shirt products (including duplicates)
-      Shoes.countDocuments().catch(() => 0), // Count ALL shoes products (including duplicates)
-      Saree.countDocuments().catch(() => 0), // Count ALL saree products (including duplicates)
+      Product.countDocuments(),
+      Product.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }]),
     ]);
 
-    // Calculate total products from all collections
-    // This includes: duplicates, products in multiple collections, all variations
-    // Each document is counted separately, so if a product appears 2x or 3x, it's counted 2x or 3x
-    const totalProducts = menCount + womenCount + watchCount + watchNewCount + lensCount + accessoryCount + menTshirtCount + shoesCount + sareeCount;
-
-    // Calculate inventory totals (avoid double counting)
-    const inventory = {
-      men: menCount + menTshirtCount, // Men includes men t-shirts
-      women: womenCount + sareeCount, // Women includes sarees
-      watches: watchCount + watchNewCount, // Combined watch count (old + new schema)
-      lens: lensCount,
-      accessories: accessoryCount + shoesCount, // Accessories includes shoes
-      saree: sareeCount, // Saree count separately for reference
-    };
-
-    // Category-wise product counts (individual collections)
-    // Note: Sarees are included in women count, not shown separately
-    // Note: Men T-Shirts are included in men count, not shown separately
-    // Note: Shoes are included in accessories count, not shown separately
-    const categoryCounts = {
-      men: menCount + menTshirtCount, // Men includes men t-shirts
-      women: womenCount + sareeCount, // Women includes sarees
-      watches: watchCount + watchNewCount,
-      lens: lensCount,
-      accessories: accessoryCount + shoesCount, // Accessories includes shoes
-    };
+    const categoryCounts = {};
+    (categoryCountsArr || []).forEach(({ _id, count }) => {
+      if (_id) categoryCounts[_id] = count;
+    });
+    const inventory = { ...categoryCounts };
 
     res.status(200).json({
       success: true,
@@ -161,9 +34,9 @@ export const getDashboardSummary = async (req, res) => {
         totalOrders,
         pendingOrders,
         totalRevenue: totalRevenue[0]?.total || 0,
-        totalProducts, // Total count of all products available on website
+        totalProducts,
         inventory,
-        categoryCounts, // Individual category counts
+        categoryCounts,
       },
     });
   } catch (error) {
@@ -257,138 +130,14 @@ export const deleteOrder = async (req, res) => {
   }
 };
 
-// Helper function to normalize saree products for admin panel
-const normalizeSareeForAdmin = (product) => {
-  const normalized = product.toObject ? product.toObject() : product;
-  
-  // Convert images object to array format
-  let imagesArray = [];
-  if (normalized.images && typeof normalized.images === 'object' && !Array.isArray(normalized.images)) {
-    imagesArray = [
-      normalized.images.image1,
-      normalized.images.image2,
-      normalized.images.image3,
-      normalized.images.image4,
-    ].filter(Boolean);
-  } else if (Array.isArray(normalized.images)) {
-    imagesArray = normalized.images.filter(img => img && typeof img === 'string' && img.trim() !== '');
-  }
-
-  // Calculate prices
-  const mrp = normalized.mrp || 0;
-  const discountPercent = normalized.discountPercent || 0;
-  const finalPrice = normalized.finalPrice || (discountPercent > 0 ? mrp - (mrp * discountPercent / 100) : mrp);
-
-  // Extract brand from product_info
-  const brand = normalized.product_info?.brand || normalized.brand || '';
-
-  return {
-    ...normalized,
-    name: normalized.title || normalized.name,
-    price: finalPrice,
-    finalPrice: finalPrice,
-    images: imagesArray,
-    brand: brand,
-    category: 'women',
-    subCategory: 'saree', // Set subCategory for filtering
-  };
-};
-
 export const getAdminProducts = async (req, res) => {
   try {
     const { category } = req.query;
-
-    if (category) {
-      // Special handling for 'saree' category - only fetch from Saree collection
-      if (category === 'saree') {
-        const sareeProducts = await Saree.find().sort({ updatedAt: -1 }).limit(200);
-        const normalizedSarees = sareeProducts.map(normalizeSareeForAdmin);
-        
-        return res.status(200).json({
-          success: true,
-          data: { products: normalizedSarees },
-        });
-      }
-      
-      // Special handling for 'women' category to include sarees
-      if (category === 'women') {
-        const [womenProducts, sareeProducts] = await Promise.all([
-          Women.find().sort({ updatedAt: -1 }).limit(200),
-          Saree.find().sort({ updatedAt: -1 }).limit(200),
-        ]);
-        
-        const normalizedWomen = womenProducts.map(item => item.toObject());
-        const normalizedSarees = sareeProducts.map(normalizeSareeForAdmin);
-        
-        const allProducts = [...normalizedWomen, ...normalizedSarees].sort((a, b) => {
-          const dateA = new Date(a.updatedAt || a.createdAt || 0);
-          const dateB = new Date(b.updatedAt || b.createdAt || 0);
-          return dateB - dateA;
-        });
-        
-        return res.status(200).json({
-          success: true,
-          data: { products: allProducts },
-        });
-      }
-      
-      const Model = resolveProductModel(category);
-      const products = await Model.find().sort({ updatedAt: -1 }).limit(200);
-      
-      // Normalize products to ensure images are arrays and name/brand for display
-      const normalizedProducts = products.map((product) => {
-        const productObj = product.toObject ? product.toObject() : product;
-        
-        // Normalize images to array format
-        if (productObj.images && typeof productObj.images === 'object' && !Array.isArray(productObj.images)) {
-          // Convert object format { image1, image2, ... } to array (keep non-empty strings)
-          productObj.images = [
-            productObj.images.image1,
-            productObj.images.image2,
-            productObj.images.image3,
-            productObj.images.image4,
-          ].filter((img) => img && typeof img === 'string' && img.trim() !== '');
-        } else if (!Array.isArray(productObj.images)) {
-          productObj.images = productObj.images ? [productObj.images] : [];
-        }
-        // For WatchNew/similar: expose name and brand for admin UI
-        if (!productObj.name && productObj.title) productObj.name = productObj.title;
-        if (!productObj.brand && productObj.product_info?.brand) productObj.brand = productObj.product_info.brand;
-        
-        return productObj;
-      });
-      
-      return res.status(200).json({
-        success: true,
-        data: { products: normalizedProducts },
-      });
-    }
-
-    const [men, menTshirts, women, watches, lens, accessories, shoes, sarees] = await Promise.all([
-      Men.find().limit(50),
-      MenTshirt.find().limit(50).catch(() => []),
-      Women.find().limit(50),
-      Watch.find().limit(50),
-      Lens.find().limit(50),
-      Accessory.find().limit(50),
-      Shoes.find().limit(50).catch(() => []),
-      Saree.find().limit(50),
-    ]);
-
+    const query = category ? { category: String(category).toLowerCase() } : {};
+    const products = await Product.find(query).sort({ updatedAt: -1 }).limit(200).lean();
     res.status(200).json({
       success: true,
-      data: {
-        products: [
-          ...men.map((item) => ({ ...item.toObject(), category: 'men' })),
-          ...menTshirts.map((item) => ({ ...item.toObject(), category: 'men' })),
-          ...women.map((item) => ({ ...item.toObject(), category: 'women' })),
-          ...watches.map((item) => ({ ...item.toObject(), category: 'watches' })),
-          ...lens.map((item) => ({ ...item.toObject(), category: 'lens' })),
-          ...accessories.map((item) => ({ ...item.toObject(), category: 'accessories' })),
-          ...shoes.map((item) => ({ ...item.toObject(), category: 'shoes' })),
-          ...sarees.map((item) => ({ ...item.toObject(), category: 'saree' })),
-        ],
-      },
+      data: { products },
     });
   } catch (error) {
     res.status(500).json({
@@ -402,78 +151,51 @@ export const getAdminProducts = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     let { category, subCategory, ...productData } = req.body;
-    
-    // If category is 'women' and subCategory is 'saree', use Saree model
-    if (category === 'women' && subCategory && subCategory.toLowerCase() === 'saree') {
-      const Model = Saree;
-      // Convert product data to saree schema format
-      const sareeData = {
-        title: productData.name || productData.title,
-        mrp: productData.originalPrice || productData.price || productData.mrp || 0,
-        discountPercent: productData.discountPercent || 0,
-        description: productData.description || '',
-        category: 'Saree',
-        categoryId: productData.categoryId || 'women-saree',
-        product_info: {
-          brand: productData.brand || '',
-          manufacturer: productData.manufacturer || '',
-          SareeLength: productData.SareeLength || '',
-          SareeMaterial: productData.SareeMaterial || '',
-          SareeColor: productData.SareeColor || '',
-          IncludedComponents: productData.IncludedComponents || '',
-        },
-        images: Array.isArray(productData.images) && productData.images.length > 0
-          ? {
-              image1: productData.images[0] || '',
-              image2: productData.images[1] || '',
-              image3: productData.images[2] || '',
-              image4: productData.images[3] || '',
-            }
-          : { image1: '' },
-        stock: productData.stock || 0,
-        sizes: productData.sizes || [],
-        isNewArrival: productData.isNewArrival || false,
-        onSale: productData.onSale || false,
-        isFeatured: productData.isFeatured || false,
-        inStock: (productData.stock || 0) > 0,
-        rating: productData.rating || 0,
-        ratingsCount: productData.ratingsCount || 0,
-        reviewsCount: productData.reviewsCount || 0,
-      };
-      const product = await Model.create(sareeData);
-      return res.status(201).json({
-        success: true,
-        message: 'Product created successfully',
-        data: { product: normalizeSareeForAdmin(product) },
-      });
-    }
-    
-    const Model = resolveProductModel(category);
-
-    if (isWatchNewModel(category)) {
-      const watchNewData = buildWatchNewData(productData, productData.gender);
-      const product = await WatchNew.create(watchNewData);
-      const productObj = product.toObject ? product.toObject() : product;
-      productObj.name = productObj.title;
-      productObj.brand = productObj.product_info?.brand;
-      productObj.images = [
-        productObj.images?.image1,
-        productObj.images?.image2,
-        productObj.images?.image3,
-        productObj.images?.image4,
-      ].filter(Boolean);
-      return res.status(201).json({
-        success: true,
-        message: 'Product created successfully',
-        data: { product: productObj },
-      });
-    }
-
-    const product = await Model.create({
-      ...productData,
-      subCategory: subCategory || productData.subCategory,
-    });
-
+    const cat = (category || 'men').toString().toLowerCase();
+    const price = Number(productData.price ?? 0);
+    const originalPrice = Number(productData.originalPrice ?? productData.price ?? 0);
+    const stockNum = Number(productData.stock ?? 0);
+    const imagesArr = Array.isArray(productData.images) ? productData.images : [];
+    const createPayload = {
+      name: (productData.name || '').trim(),
+      brand: (productData.brand || '').trim(),
+      category: cat,
+      subCategory: (subCategory || productData.subCategory || '').trim(),
+      gender: productData.gender || undefined,
+      price,
+      originalPrice: originalPrice || price,
+      discountPercent: Number(productData.discountPercent ?? 0),
+      stock: stockNum,
+      images: imagesArr,
+      description: (productData.description || '').trim(),
+      isNewArrival: Boolean(productData.isNewArrival),
+      onSale: Boolean(productData.onSale),
+      isFeatured: Boolean(productData.isFeatured),
+      inStock: stockNum > 0,
+      rating: Number(productData.rating ?? 0),
+      ratingsCount: Number(productData.ratingsCount ?? 0),
+      reviewsCount: Number(productData.reviewsCount ?? 0),
+      ...(productData.sizes && { sizes: productData.sizes }),
+      ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
+      ...(productData.color && { color: productData.color }),
+      ...(productData.productDetails && { productDetails: productData.productDetails }),
+      // Watch specific fields
+      ...(productData.model && { model: (productData.model || '').trim() }),
+      ...(productData.functions && { functions: (productData.functions || '').trim() }),
+      ...(productData.dialColor && { dialColor: (productData.dialColor || '').trim() }),
+      ...(productData.dialSize && { dialSize: (productData.dialSize || '').trim() }),
+      ...(productData.strapColor && { strapColor: (productData.strapColor || '').trim() }),
+      ...(productData.strapMaterial && { strapMaterial: (productData.strapMaterial || '').trim() }),
+      ...(productData.crystalMaterial && { crystalMaterial: (productData.crystalMaterial || '').trim() }),
+      ...(productData.lockType && { lockType: (productData.lockType || '').trim() }),
+      ...(productData.waterResistance && { waterResistance: (productData.waterResistance || '').trim() }),
+      ...(productData.calendarType && { calendarType: (productData.calendarType || '').trim() }),
+      ...(productData.movement && { movement: (productData.movement || '').trim() }),
+      ...(productData.itemWeight && { itemWeight: (productData.itemWeight || '').trim() }),
+      ...(productData.quality && { quality: (productData.quality || '').trim() }),
+      ...(productData.warranty && { warranty: (productData.warranty || '').trim() }),
+    };
+    const product = await Product.create(createPayload);
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
@@ -491,136 +213,49 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     let { category, subCategory, ...productData } = req.body;
-    
-    // Check if product exists in Saree collection first
-    let product = await Saree.findById(req.params.id);
-    if (product) {
-      // It's a saree product, update in Saree collection
-      const updateData = {
-        title: productData.name || productData.title || product.title,
-        mrp: productData.originalPrice || productData.price || productData.mrp || product.mrp,
-        discountPercent: productData.discountPercent !== undefined ? productData.discountPercent : product.discountPercent,
-        description: productData.description !== undefined ? productData.description : product.description,
-        product_info: {
-          brand: productData.brand || product.product_info?.brand || '',
-          manufacturer: productData.manufacturer || product.product_info?.manufacturer || '',
-          SareeLength: productData.SareeLength || product.product_info?.SareeLength || '',
-          SareeMaterial: productData.SareeMaterial || product.product_info?.SareeMaterial || '',
-          SareeColor: productData.SareeColor || product.product_info?.SareeColor || '',
-          IncludedComponents: productData.IncludedComponents || product.product_info?.IncludedComponents || '',
-        },
-        stock: productData.stock !== undefined ? productData.stock : product.stock,
-        sizes: productData.sizes || product.sizes || [],
-        isNewArrival: productData.isNewArrival !== undefined ? productData.isNewArrival : product.isNewArrival,
-        onSale: productData.onSale !== undefined ? productData.onSale : product.onSale,
-        isFeatured: productData.isFeatured !== undefined ? productData.isFeatured : product.isFeatured,
-        inStock: (productData.stock !== undefined ? productData.stock : product.stock) > 0,
-      };
-      
-      if (Array.isArray(productData.images) && productData.images.length > 0) {
-        updateData.images = {
-          image1: productData.images[0] || '',
-          image2: productData.images[1] || '',
-          image3: productData.images[2] || '',
-          image4: productData.images[3] || '',
-        };
-      }
-      
-      product = await Saree.findByIdAndUpdate(req.params.id, updateData, { new: true });
-      return res.status(200).json({
-        success: true,
-        message: 'Product updated successfully',
-        data: { product: normalizeSareeForAdmin(product) },
-      });
-    }
-    
-    // If category is 'women' and subCategory is 'saree', use Saree model
-    if (category === 'women' && subCategory && subCategory.toLowerCase() === 'saree') {
-      const Model = Saree;
-      const updateData = {
-        title: productData.name || productData.title,
-        mrp: productData.originalPrice || productData.price || productData.mrp || 0,
-        discountPercent: productData.discountPercent || 0,
-        description: productData.description || '',
-        product_info: {
-          brand: productData.brand || '',
-          manufacturer: productData.manufacturer || '',
-          SareeLength: productData.SareeLength || '',
-          SareeMaterial: productData.SareeMaterial || '',
-          SareeColor: productData.SareeColor || '',
-          IncludedComponents: productData.IncludedComponents || '',
-        },
-        stock: productData.stock || 0,
-        sizes: productData.sizes || [],
-        isNewArrival: productData.isNewArrival || false,
-        onSale: productData.onSale || false,
-        isFeatured: productData.isFeatured || false,
-        inStock: (productData.stock || 0) > 0,
-      };
-      
-      if (Array.isArray(productData.images) && productData.images.length > 0) {
-        updateData.images = {
-          image1: productData.images[0] || '',
-          image2: productData.images[1] || '',
-          image3: productData.images[2] || '',
-          image4: productData.images[3] || '',
-        };
-      }
-      
-      product = await Model.findByIdAndUpdate(req.params.id, updateData, { new: true });
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: 'Product not found',
-        });
-      }
-      return res.status(200).json({
-        success: true,
-        message: 'Product updated successfully',
-        data: { product: normalizeSareeForAdmin(product) },
-      });
-    }
-    
-    const Model = resolveProductModel(category);
-
-    if (isWatchNewModel(category)) {
-      const watchNewData = buildWatchNewData(productData, productData.gender);
-      product = await WatchNew.findByIdAndUpdate(req.params.id, watchNewData, { new: true });
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: 'Product not found',
-        });
-      }
-      const productObj = product.toObject ? product.toObject() : product;
-      productObj.name = productObj.title;
-      productObj.brand = productObj.product_info?.brand;
-      productObj.images = [
-        productObj.images?.image1,
-        productObj.images?.image2,
-        productObj.images?.image3,
-        productObj.images?.image4,
-      ].filter(Boolean);
-      return res.status(200).json({
-        success: true,
-        message: 'Product updated successfully',
-        data: { product: productObj },
-      });
-    }
-
-    product = await Model.findByIdAndUpdate(
-      req.params.id,
-      { ...productData, subCategory: subCategory !== undefined ? subCategory : productData.subCategory },
-      { new: true }
-    );
-
+    const price = Number(productData.price ?? 0);
+    const originalPrice = Number(productData.originalPrice ?? productData.price ?? 0);
+    const stockNum = Number(productData.stock ?? 0);
+    const imagesArr = Array.isArray(productData.images) ? productData.images : [];
+    const updatePayload = {
+      ...(productData.name !== undefined && { name: (productData.name || '').trim() }),
+      ...(productData.brand !== undefined && { brand: (productData.brand || '').trim() }),
+      ...(category !== undefined && { category: String(category).toLowerCase() }),
+      ...(subCategory !== undefined && { subCategory: subCategory }),
+      ...(productData.gender !== undefined && { gender: productData.gender }),
+      ...(productData.price !== undefined && { price }),
+      ...(productData.originalPrice !== undefined && { originalPrice: originalPrice || price }),
+      ...(productData.discountPercent !== undefined && { discountPercent: Number(productData.discountPercent) }),
+      ...(productData.stock !== undefined && { stock: stockNum }),
+      ...(productData.images !== undefined && { images: imagesArr }),
+      ...(productData.description !== undefined && { description: (productData.description || '').trim() }),
+      ...(productData.isNewArrival !== undefined && { isNewArrival: Boolean(productData.isNewArrival) }),
+      ...(productData.onSale !== undefined && { onSale: Boolean(productData.onSale) }),
+      ...(productData.isFeatured !== undefined && { isFeatured: Boolean(productData.isFeatured) }),
+      ...(productData.stock !== undefined && { inStock: stockNum > 0 }),
+      // Watch specific fields
+      ...(productData.model !== undefined && { model: (productData.model || '').trim() }),
+      ...(productData.functions !== undefined && { functions: (productData.functions || '').trim() }),
+      ...(productData.dialColor !== undefined && { dialColor: (productData.dialColor || '').trim() }),
+      ...(productData.dialSize !== undefined && { dialSize: (productData.dialSize || '').trim() }),
+      ...(productData.strapColor !== undefined && { strapColor: (productData.strapColor || '').trim() }),
+      ...(productData.strapMaterial !== undefined && { strapMaterial: (productData.strapMaterial || '').trim() }),
+      ...(productData.crystalMaterial !== undefined && { crystalMaterial: (productData.crystalMaterial || '').trim() }),
+      ...(productData.lockType !== undefined && { lockType: (productData.lockType || '').trim() }),
+      ...(productData.waterResistance !== undefined && { waterResistance: (productData.waterResistance || '').trim() }),
+      ...(productData.calendarType !== undefined && { calendarType: (productData.calendarType || '').trim() }),
+      ...(productData.movement !== undefined && { movement: (productData.movement || '').trim() }),
+      ...(productData.itemWeight !== undefined && { itemWeight: (productData.itemWeight || '').trim() }),
+      ...(productData.quality !== undefined && { quality: (productData.quality || '').trim() }),
+      ...(productData.warranty !== undefined && { warranty: (productData.warranty || '').trim() }),
+    };
+    const product = await Product.findByIdAndUpdate(req.params.id, updatePayload, { new: true });
     if (!product) {
       return res.status(404).json({
         success: false,
         message: 'Product not found',
       });
     }
-
     res.status(200).json({
       success: true,
       message: 'Product updated successfully',
@@ -680,28 +315,13 @@ export const deleteUser = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
   try {
-    const { category } = req.query;
-    
-    // Check if product exists in Saree collection first
-    let product = await Saree.findById(req.params.id);
-    if (product) {
-      await Saree.findByIdAndDelete(req.params.id);
-      return res.status(200).json({
-        success: true,
-        message: 'Product deleted successfully',
-      });
-    }
-    
-    const Model = resolveProductModel(category);
-    product = await Model.findByIdAndDelete(req.params.id);
-
+    const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
       return res.status(404).json({
         success: false,
         message: 'Product not found',
       });
     }
-
     res.status(200).json({
       success: true,
       message: 'Product deleted successfully',
@@ -716,33 +336,20 @@ export const deleteProduct = async (req, res) => {
 };
 
 // --- Nav Categories (admin CRUD) ---
-// Build path from productType + gender + subCategory (no manual path needed)
-function buildCategoryPath(productType, gender, subCategory) {
-  const base = { watches: '/watches', accessories: '/accessories', men: '/men', women: '/women' }[productType] || '/';
-  if (productType === 'watches' || productType === 'accessories') {
-    const params = new URLSearchParams();
-    if (gender) params.set('gender', gender);
-    if (subCategory) params.set('subCategory', subCategory);
-    const q = params.toString();
-    return q ? `${base}?${q}` : base;
-  }
-  if (productType === 'men' || productType === 'women') {
-    const params = new URLSearchParams();
-    if (subCategory) params.set('subCategory', subCategory);
-    const q = params.toString();
-    return q ? `${base}?${q}` : base;
-  }
-  return base;
+// Path = /{slug}; subItem path = /{slug}?subCategory={slugifiedName}
+function slugify(text) {
+  return (text || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'sub';
 }
 
-function normalizeSubItems(subItems, productType, gender) {
+function normalizeSubItems(subItems, categorySlug) {
   if (!Array.isArray(subItems)) return [];
   return subItems.map((item) => {
     const name = (item.name || '').trim();
     if (!name) return null;
+    const basePath = `/${categorySlug}`;
     const path = item.path && item.path.trim()
       ? item.path.trim()
-      : buildCategoryPath(productType, gender, (item.subCategory || '').trim() || null);
+      : `${basePath}?subCategory=${slugify(item.subCategory || name)}`;
     return { name, path };
   }).filter(Boolean);
 }
@@ -765,26 +372,23 @@ export const getAdminCategories = async (req, res) => {
 
 export const createCategory = async (req, res) => {
   try {
-    const { name, slug, path: pathInput, productType, gender, subCategory, order, subItems } = req.body;
-    if (!name || !slug || !productType) {
+    const { name, slug: slugInput, subItems } = req.body;
+    if (!(name && (name || '').trim())) {
       return res.status(400).json({
         success: false,
-        message: 'name, slug and productType are required',
+        message: 'Category name is required',
       });
     }
-    const slugNorm = slug.trim().toLowerCase().replace(/\s+/g, '-');
-    const genderVal = (gender || '').trim() || null;
-    const subCatVal = (subCategory || '').trim() || null;
-    const path = (pathInput && pathInput.trim()) || buildCategoryPath(productType, genderVal, subCatVal);
-    const normalizedSubItems = normalizeSubItems(subItems, productType, genderVal);
+    const slugNorm = (slugInput && slugInput.trim())
+      ? slugInput.trim().toLowerCase().replace(/\s+/g, '-')
+      : (name || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const path = `/${slugNorm}`;
+    const normalizedSubItems = normalizeSubItems(subItems, slugNorm);
     const category = await Category.create({
-      name,
+      name: (name || '').trim(),
       slug: slugNorm,
       path,
-      productType,
-      gender: genderVal || '',
-      subCategory: subCatVal || '',
-      order: typeof order === 'number' ? order : await Category.countDocuments(),
+      order: await Category.countDocuments(),
       subItems: normalizedSubItems,
     });
     res.status(201).json({
@@ -809,7 +413,7 @@ export const createCategory = async (req, res) => {
 
 export const updateCategory = async (req, res) => {
   try {
-    const { name, slug, path: pathInput, productType, gender, subCategory, order, subItems } = req.body;
+    const { name, slug: slugInput, subItems } = req.body;
     const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({
@@ -817,21 +421,14 @@ export const updateCategory = async (req, res) => {
         message: 'Category not found',
       });
     }
-    if (name !== undefined) category.name = name;
-    if (slug !== undefined) category.slug = slug.trim().toLowerCase().replace(/\s+/g, '-');
-    if (productType !== undefined) category.productType = productType;
-    const genderVal = (gender !== undefined ? gender : category.gender) || null;
-    const subCatVal = (subCategory !== undefined ? subCategory : category.subCategory) || null;
-    if (pathInput !== undefined && pathInput.trim()) {
-      category.path = pathInput.trim();
-    } else {
-      category.path = buildCategoryPath(category.productType, genderVal, subCatVal);
-    }
-    category.gender = genderVal || '';
-    category.subCategory = subCatVal || '';
-    if (typeof order === 'number') category.order = order;
+    if (name !== undefined && (name || '').trim()) category.name = (name || '').trim();
+    const slugNorm = (slugInput !== undefined && slugInput && slugInput.trim())
+      ? slugInput.trim().toLowerCase().replace(/\s+/g, '-')
+      : (category.name || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (slugInput !== undefined) category.slug = slugNorm;
+    category.path = `/${category.slug}`;
     if (Array.isArray(subItems)) {
-      category.subItems = normalizeSubItems(subItems, category.productType, genderVal);
+      category.subItems = normalizeSubItems(subItems, category.slug);
     }
     await category.save();
     res.status(200).json({

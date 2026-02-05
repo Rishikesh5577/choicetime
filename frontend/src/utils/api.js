@@ -205,54 +205,32 @@ export const categoriesAPI = {
   getCategories: async () => apiRequest('/categories'),
 };
 
-// Product API calls
+// Product API calls (single products collection: GET /api/products?category=... & GET /api/products/:id)
 export const productAPI = {
-  getWatches: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return apiRequest(`/products/watches${queryString ? `?${queryString}` : ''}`);
+  getProducts: async (category, params = {}) => {
+    const q = new URLSearchParams({ ...params, ...(category && { category }) }).toString();
+    return apiRequest(`/products${q ? `?${q}` : ''}`);
   },
 
-  getWatchById: async (id) => {
-    return apiRequest(`/products/watches/${id}`);
+  getProductById: async (id) => {
+    return apiRequest(`/products/${id}`);
   },
 
-  getLenses: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return apiRequest(`/products/lens${queryString ? `?${queryString}` : ''}`);
-  },
+  getWatches: async (params = {}) => productAPI.getProducts('watches', params),
+  getWatchById: async (id) => productAPI.getProductById(id),
 
-  getLensById: async (id) => {
-    return apiRequest(`/products/lens/${id}`);
-  },
+  getLenses: async (params = {}) => productAPI.getProducts('lens', params),
+  getLensById: async (id) => productAPI.getProductById(id),
 
-  getAccessories: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return apiRequest(`/products/accessories${queryString ? `?${queryString}` : ''}`);
-  },
+  getAccessories: async (params = {}) => productAPI.getProducts('accessories', params),
+  getAccessoryById: async (id) => productAPI.getProductById(id),
 
-  getAccessoryById: async (id) => {
-    return apiRequest(`/products/accessories/${id}`);
-  },
+  getMenItems: async (params = {}) => productAPI.getProducts('men', params),
+  getMenItemById: async (id) => productAPI.getProductById(id),
 
-  getMenItems: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return apiRequest(`/products/men${queryString ? `?${queryString}` : ''}`);
-  },
+  getWomenItems: async (params = {}) => productAPI.getProducts('women', params),
+  getWomenItemById: async (id) => productAPI.getProductById(id),
 
-  getMenItemById: async (id) => {
-    return apiRequest(`/products/men/${id}`);
-  },
-
-  getWomenItems: async (params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    return apiRequest(`/products/women${queryString ? `?${queryString}` : ''}`);
-  },
-
-  getWomenItemById: async (id) => {
-    return apiRequest(`/products/women/${id}`);
-  },
-
-  // Helper to get all products from all categories
   getAllProducts: async (params = {}) => {
     try {
       const [watches, lenses, accessories, men, women] = await Promise.all([
@@ -262,7 +240,6 @@ export const productAPI = {
         productAPI.getMenItems(params),
         productAPI.getWomenItems(params),
       ]);
-
       const allProducts = [
         ...(watches.success ? watches.data.products : []),
         ...(lenses.success ? lenses.data.products : []),
@@ -270,17 +247,9 @@ export const productAPI = {
         ...(men.success ? men.data.products : []),
         ...(women.success ? women.data.products : []),
       ];
-
-      return {
-        success: true,
-        data: { products: allProducts },
-      };
+      return { success: true, data: { products: allProducts } };
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data: { products: [] },
-      };
+      return { success: false, message: error.message, data: { products: [] } };
     }
   },
 };

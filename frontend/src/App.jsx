@@ -46,16 +46,9 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#F7F4EE] flex flex-col">
       {!isAdminRoute && <Navbar />}
-      <main className="flex-grow pt-[33px] md:pt-[73px]">
+      <main className="flex-grow pt-[100px] md:pt-[110px]">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/men" element={<CategoryPage />} />
-          <Route path="/women" element={<CategoryPage />} />
-          <Route path="/watches" element={<CategoryPage />} />
-          <Route path="/lenses" element={<CategoryPage />} />
-          <Route path="/accessories" element={<CategoryPage />} />
-          <Route path="/men/:category" element={<CategoryPage />} />
-          <Route path="/women/:category" element={<CategoryPage />} />
           <Route path="/new-arrival" element={<SpecialCollection type="new-arrival" />} />
           <Route path="/sale" element={<SpecialCollection type="sale" />} />
           <Route path="/product/:category/:id" element={<ProductDetail />} />
@@ -80,6 +73,8 @@ function AppContent() {
           <Route path="/search" element={<SearchResults />} />
           <Route path="/recently-viewed" element={<RecentlyViewed />} />
           <Route path="/compare" element={<ProductComparison />} />
+          {/* Dynamic category route - handles all categories from database */}
+          <Route path="/:slug" element={<CategoryPage />} />
         </Routes>
       </main>
       {!isAdminRoute && <Footer />}

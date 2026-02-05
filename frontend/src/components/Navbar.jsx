@@ -160,8 +160,8 @@ const Navbar = () => {
                 </Link>
               </div>
 
-              {/* CENTER: Logo */}
-              <div className="flex items-center absolute left-1/2 -translate-x-1/2">
+              {/* Logo - Left on mobile, Center on desktop */}
+              <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" className="flex-shrink-0 group relative z-10">
                   <img
                     src="https://res.cloudinary.com/dl6hpq7mm/image/upload/v1770185345/image-removebg-preview_2_we5d7r.png"
@@ -258,7 +258,7 @@ const Navbar = () => {
           </div>
         </nav>
 
-        {/* ========== SECONDARY NAVBAR (Categories – only category name, click = go to category) ========== */}
+        {/* ========== SECONDARY NAVBAR - DESKTOP (Categories – only category name, click = go to category) ========== */}
         <nav className="hidden md:block bg-[#F7F4EE]/90 border-b border-gray-200 backdrop-blur-sm">
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12">
             <div className="flex items-center justify-center gap-1 lg:gap-2 py-1 lg:py-1.5">
@@ -272,6 +272,38 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
+            </div>
+          </div>
+        </nav>
+
+        {/* ========== SECONDARY NAVBAR - MOBILE (Horizontal scrollable categories) ========== */}
+        <nav className="md:hidden bg-[#F7F4EE] border-b border-gray-200">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-1 px-3 py-2 min-w-max">
+              <Link
+                to="/"
+                className={`flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-full transition-all
+                ${activeCategory === 'home' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
+              >
+                Home
+              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.id}
+                  to={link.path}
+                  className={`flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-full transition-all
+                  ${activeCategory === link.id ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <Link
+                to="/sale"
+                className={`flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-full transition-all
+                ${activeCategory === 'sale' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600'}`}
+              >
+                Sale
+              </Link>
             </div>
           </div>
         </nav>

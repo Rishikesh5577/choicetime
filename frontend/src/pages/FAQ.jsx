@@ -135,7 +135,7 @@ const FAQ = () => {
         <div className="space-y-8">
           {faqs.map((section, sectionIndex) => (
             <div key={sectionIndex} className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="bg-gray-900 text-white px-6 py-4">
+              <div className="bg-[#5C4D3D] text-white px-6 py-4">
                 <h2 className="text-xl font-semibold">{section.category}</h2>
               </div>
               <div className="divide-y divide-gray-200">
@@ -177,7 +177,7 @@ const FAQ = () => {
           <p className="text-gray-600 mb-4">Can't find the answer you're looking for? Please get in touch with our friendly team.</p>
           <Link
             to="/contact"
-            className="inline-block px-6 py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+            className="inline-block px-6 py-3 bg-[#5C4D3D] text-white font-semibold rounded-lg hover:bg-[#4A3F32] transition-colors"
           >
             Contact Us
           </Link>

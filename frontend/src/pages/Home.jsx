@@ -144,7 +144,7 @@ const scroll = (direction) => {
 
 // --- NEWS TICKER COMPONENT (New) ---
 const NewsTicker = () => {
-  const marqueeContent = "⚡ FREE SHIPPING ON ALL ORDERS OVER ₹1,000 ⚡ | ✨ NEW SEASON STYLES ADDED DAILY ✨ | 🎁 LIMITED TIME DISCOUNTS ON WATCHES 🎁 | 🛍️ JOIN OUR LOYALTY PROGRAM 🛍️";
+  const marqueeContent = "★ SALE IS LIVE — UP TO 50% OFF ★ | ◆ FREE SHIPPING ON ORDERS OVER ₹999 ◆ | ● NEW ARRIVALS EVERY WEEK ● | ♦ EXTRA 10% OFF ON FIRST ORDER ♦";
 
   // NOTE: For the 'continuous' marquee animation, this CSS needs to be applied.
   // In a real project, place this CSS in your global stylesheet (e.g., index.css).
@@ -215,7 +215,7 @@ const Home = () => {
   }, []);
 
   const carouselSlides = [
-    { image: 'https://res.cloudinary.com/dvkxgrcbv/image/upload/v1765795400/Black_Bold_Texts_Login_Page_Wireframe_Website_UI_Prototype_2048_x_594_px_1_morepy.svg', link: '/' }
+    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770261032/image_ua7yjh.jpg', link: '/' }
   ];
 
   // --- CAROUSEL LOGIC ---
@@ -234,9 +234,9 @@ const Home = () => {
     <div className="min-h-screen bg-[#F7F4EE] font-sans text-gray-800">
 
       {/* --- HERO SECTION (Restored & Top Margin Removed) --- */}
-      <div className="relative w-full bg-[#f7f4ee] overflow-hidden group">
+      <div className="relative w-full overflow-hidden group">
         <div className="hidden lg:block relative w-full">
-          <div className="relative w-full max-w-[2000px] mx-auto aspect-[21/9] md:aspect-[3/1]">
+          <div className="relative w-full" style={{ aspectRatio: '2161/771' }}>
             {carouselSlides.map((slide, index) => (
               <Link
                 to={slide.link}
@@ -246,9 +246,9 @@ const Home = () => {
                 <img
                   src={slide.image}
                   alt="Banner"
-                  className="w-full h-full object-contain object-center"
+                  className="w-full h-full object-cover"
                   loading={index === 0 ? "eager" : "lazy"}
-                  onError={(e) => handleImageError(e, 1920, 600)}
+                  onError={(e) => handleImageError(e, 2161, 771)}
                 />
               </Link>
             ))}
@@ -353,37 +353,89 @@ const Home = () => {
         </div>
       </section> */}
 
-      {/* --- PRODUCT CATEGORIES (Men's / Women's Watches, Wallet, Belt) --- */}
-      <section className="py-12 md:py-16 mb-20 bg-[#F7F4EE]">
+      {/* --- PRODUCT CATEGORIES --- */}
+      <section className="py-12 md:py-20 bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
-            Product Categories
-          </h2>
+          {/* Section Header */}
+          <div className="text-center mb-10 md:mb-14">
+            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
+              Shop By Category
+            </h2>
+            <p className="text-gray-500 mt-2 text-sm md:text-base">Explore our curated collections</p>
+          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+          {/* Categories Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
             {[
-              { label: "Men's Watches", path: '/watches?gender=men', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191651/photo-1524592094714-0f0654e20314_dv6fdz.avif' },
-              { label: "Women's Watches", path: '/watches?gender=women', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191651/photo-1524592094714-0f0654e20314_dv6fdz.avif' },
-              { label: "Men's Wallet", path: '/accessories?gender=men&subCategory=wallet', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765192028/1_08426779-951c-47b7-9feb-ef29ca85b27c_frapuz.webp' },
-              { label: "Women's Wallet", path: '/accessories?gender=women&subCategory=wallet', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191722/c037121844264e7d40ffc2bb11335a21_vadndt.jpg' },
-              { label: "Men's Belt", path: '/accessories?gender=men&subCategory=belt', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191618/photo-1515562141207-7a88fb7ce338_k4onlv.avif' },
-              { label: "Women's Belt", path: '/accessories?gender=women&subCategory=belt', image: 'https://res.cloudinary.com/de1bg8ivx/image/upload/v1765191618/photo-1515562141207-7a88fb7ce338_k4onlv.avif' }
+              { 
+                label: "Men's Watches", 
+                path: '/mens-watches', 
+                image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Women's Watches", 
+                path: '/womens-watches', 
+                image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=600&sh=600'
+              },
+              { 
+                label: "Men's Wallet", 
+                path: '/mens-wallet', 
+                image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Women's Wallet", 
+                path: '/womens-wallet', 
+                image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Men's Belt", 
+                path: '/mens-belts', 
+                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Women's Belt", 
+                path: '/womens-belt', 
+                image: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Men's Perfumes", 
+                path: '/mens-perfumes', 
+                image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop'
+              },
+              { 
+                label: "Women's Perfumes", 
+                path: '/womens-perfumes', 
+                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600&auto=format&fit=crop'
+              }
             ].map((cat) => (
               <Link
                 key={cat.path}
                 to={cat.path}
-                className="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+                className="group relative block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-300"
               >
-                <div className="aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                {/* Image Container */}
+                <div className="aspect-[4/5] overflow-hidden bg-gray-100">
                   <img
                     src={cat.image}
                     alt={cat.label}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                   />
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
                 </div>
-                <p className="text-center font-semibold text-gray-800 mt-3 mb-2 text-sm md:text-base">
-                  {cat.label}
-                </p>
+                
+                {/* Label */}
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <p className="text-white font-bold text-sm md:text-base text-center drop-shadow-lg">
+                    {cat.label}
+                  </p>
+                  {/* Arrow Icon on Hover */}
+                  <div className="flex justify-center mt-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                    <span className="bg-white text-black text-xs font-semibold px-3 py-1 rounded-full">
+                      Shop Now
+                    </span>
+                  </div>
+                </div>
               </Link>
             ))}
           </div>

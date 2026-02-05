@@ -3,25 +3,7 @@ import { Link } from 'react-router-dom';
 import { adminAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
-const categoryOptions = [
-  { label: 'Men', value: 'men' },
-  { label: 'Women', value: 'women' },
-  { label: 'Saree', value: 'saree' },
-  { label: 'Watches', value: 'watches' },
-  { label: 'Lens', value: 'lens' },
-  { label: 'Accessories', value: 'accessories' },
-];
-
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-
-// Subcategory options based on category
-const subCategoryOptions = {
-  men: ['shirt', 'tshirt', 'jeans', 'trousers', 'shoes'],
-  women: ['shirt', 'tshirt', 'jeans', 'trousers', 'saree', 'shoes'],
-  watches: ['analog', 'digital', 'smartwatch', 'sports', 'luxury'],
-  lens: ['reading', 'sunglasses', 'computer', 'blue-light', 'progressive'],
-  accessories: ['belt', 'wallet', 'bag', 'cap', 'watch-strap'],
-};
 
 // SVG Icons
 const IconDashboard = (props) => (
@@ -119,20 +101,28 @@ const AdminDashboard = () => {
     isNewArrival: false,
     onSale: false,
     isFeatured: false,
+    // Watch specific fields
+    model: '',
+    functions: '',
+    dialColor: '',
+    dialSize: '',
+    strapColor: '',
+    strapMaterial: '',
+    crystalMaterial: '',
+    lockType: '',
+    waterResistance: '',
+    calendarType: '',
+    movement: '',
+    itemWeight: '',
+    quality: '',
+    warranty: '',
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [navCategories, setNavCategories] = useState([]);
-  const [categoryForm, setCategoryForm] = useState({
-    name: '',
-    slug: '',
-    productType: 'watches',
-    gender: '',
-    subCategory: '',
-    order: 0,
-  });
+  const [categoryForm, setCategoryForm] = useState({ name: '' });
   const [editingCategory, setEditingCategory] = useState(null);
-  const [subItemInputs, setSubItemInputs] = useState([{ name: '', subCategory: '' }]);
+  const [subItemInputs, setSubItemInputs] = useState([{ name: '' }]);
 
   const isAdmin = user?.isAdmin;
 
@@ -152,12 +142,7 @@ const AdminDashboard = () => {
       fetchOrders();
     }
     if (activeSection === 'products' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'delete-product') {
-      let categoryToFetch = productCategory;
-      if (activeSection === 'products' && navCategories.length > 0 && productCategory) {
-        const nav = navCategories.find((c) => c.slug === productCategory);
-        if (nav) categoryToFetch = nav.productType;
-      }
-      fetchProducts(categoryToFetch);
+      fetchProducts(productCategory);
       setSelectedSubCategory(''); // Reset subcategory filter when category changes
     }
     if (activeSection === 'users') {
@@ -168,15 +153,7 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, activeSection, productCategory]);
 
-  // For View Products: resolve backend category from selected nav (slug → productType)
-  const backendCategoryForViewProducts = useMemo(() => {
-    if (navCategories.length > 0 && productCategory) {
-      const nav = navCategories.find((c) => c.slug === productCategory);
-      if (nav) return nav.productType;
-    }
-    return productCategory;
-  }, [navCategories, productCategory]);
-
+  // For View Products: get subcategory options from the selected nav category
   const selectedNavForViewProducts = useMemo(
     () => (productCategory ? navCategories.find((c) => c.slug === productCategory) : null),
     [navCategories, productCategory]
@@ -268,23 +245,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const productTypeOptions = [
-    { value: 'watches', label: 'Watches' },
-    { value: 'accessories', label: 'Accessories' },
-    { value: 'men', label: 'Men' },
-    { value: 'women', label: 'Women' },
-  ];
-
   const resetCategoryForm = () => {
-    setCategoryForm({
-      name: '',
-      slug: '',
-      productType: 'watches',
-      gender: '',
-      subCategory: '',
-      order: navCategories.length,
-    });
-    setSubItemInputs([{ name: '', subCategory: '' }]);
+    setCategoryForm({ name: '' });
+    setSubItemInputs([{ name: '' }]);
     setEditingCategory(null);
   };
 
@@ -308,14 +271,10 @@ const AdminDashboard = () => {
   const handleCategoryFormChange = (e) => {
     const { name, value } = e.target;
     setCategoryForm((prev) => ({ ...prev, [name]: value }));
-    if (name === 'name' && !editingCategory) {
-      const slug = value.trim().toLowerCase().replace(/\s+/g, '-');
-      setCategoryForm((prev) => ({ ...prev, slug }));
-    }
   };
 
   const handleAddSubItemRow = () => {
-    setSubItemInputs((prev) => [...prev, { name: '', subCategory: '' }]);
+    setSubItemInputs((prev) => [...prev, { name: '' }]);
   };
 
   const handleSubItemChange = (index, field, value) => {
@@ -333,12 +292,11 @@ const AdminDashboard = () => {
   const handleCreateCategory = async (e) => {
     e.preventDefault();
     const subItems = subItemInputs
-      .filter((s) => s.name.trim())
-      .map((s) => ({ name: s.name.trim(), subCategory: (s.subCategory || '').trim() }));
+      .filter((s) => (s.name || '').trim())
+      .map((s) => ({ name: (s.name || '').trim() }));
     try {
       await adminAPI.createCategory({
-        ...categoryForm,
-        order: Number(categoryForm.order) || navCategories.length,
+        name: (categoryForm.name || '').trim(),
         subItems,
       });
       setMessage({ type: 'success', text: 'Category added' });
@@ -351,19 +309,11 @@ const AdminDashboard = () => {
 
   const handleEditCategory = (cat) => {
     setEditingCategory(cat);
-    const fromPath = getParamsFromPath(cat.path);
-    setCategoryForm({
-      name: cat.name,
-      slug: cat.slug,
-      productType: cat.productType || 'watches',
-      gender: cat.gender || fromPath.gender,
-      subCategory: cat.subCategory || fromPath.subCategory,
-      order: cat.order ?? 0,
-    });
+    setCategoryForm({ name: cat.name });
     setSubItemInputs(
       (cat.subItems && cat.subItems.length)
-        ? cat.subItems.map((s) => ({ name: s.name, subCategory: getSubCategoryFromPath(s.path) }))
-        : [{ name: '', subCategory: '' }]
+        ? cat.subItems.map((s) => ({ name: s.name }))
+        : [{ name: '' }]
     );
     setActiveSection('categories');
   };
@@ -372,12 +322,11 @@ const AdminDashboard = () => {
     e.preventDefault();
     if (!editingCategory) return;
     const subItems = subItemInputs
-      .filter((s) => s.name.trim())
-      .map((s) => ({ name: s.name.trim(), subCategory: (s.subCategory || '').trim() }));
+      .filter((s) => (s.name || '').trim())
+      .map((s) => ({ name: (s.name || '').trim() }));
     try {
       await adminAPI.updateCategory(editingCategory._id, {
-        ...categoryForm,
-        order: Number(categoryForm.order),
+        name: (categoryForm.name || '').trim(),
         subItems,
       });
       setMessage({ type: 'success', text: 'Category updated' });
@@ -443,6 +392,26 @@ const AdminDashboard = () => {
       if (name === 'category') {
         updated.subCategory = '';
       }
+      // Auto-calculate discount when price or originalPrice changes
+      if (name === 'price' || name === 'originalPrice') {
+        const price = name === 'price' ? Number(value) : Number(prev.price);
+        const originalPrice = name === 'originalPrice' ? Number(value) : Number(prev.originalPrice);
+        if (originalPrice > 0 && price > 0 && originalPrice > price) {
+          updated.discountPercent = Math.round(((originalPrice - price) / originalPrice) * 100);
+        } else if (originalPrice > 0 && price >= originalPrice) {
+          updated.discountPercent = 0;
+        } else {
+          updated.discountPercent = 0;
+        }
+      }
+      // Auto-calculate price when discountPercent changes (if originalPrice exists)
+      if (name === 'discountPercent') {
+        const originalPrice = Number(prev.originalPrice);
+        const discount = Number(value);
+        if (originalPrice > 0 && discount >= 0 && discount <= 100) {
+          updated.price = Math.round(originalPrice * (1 - discount / 100));
+        }
+      }
       return updated;
     });
   };
@@ -462,28 +431,41 @@ const AdminDashboard = () => {
       isNewArrival: false,
       onSale: false,
       isFeatured: false,
+      // Watch specific fields
+      model: '',
+      functions: '',
+      dialColor: '',
+      dialSize: '',
+      strapColor: '',
+      strapMaterial: '',
+      crystalMaterial: '',
+      lockType: '',
+      waterResistance: '',
+      calendarType: '',
+      movement: '',
+      itemWeight: '',
+      quality: '',
+      warranty: '',
     });
     setEditingProduct(null);
   };
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
-    let categoryValue = product.category || productCategory;
-    if (navCategories.length > 0) {
-      const match = navCategories.find(
-        (c) =>
-          c.productType === (product.category || productCategory) &&
-          (c.gender || '') === (product.gender || '')
-      );
-      if (match) categoryValue = match.slug;
+    const price = Number(product.price || product.finalPrice || 0);
+    const originalPrice = Number(product.originalPrice || product.price || 0);
+    // Calculate discount automatically
+    let calculatedDiscount = 0;
+    if (originalPrice > 0 && price > 0 && originalPrice > price) {
+      calculatedDiscount = Math.round(((originalPrice - price) / originalPrice) * 100);
     }
     setProductForm({
-      category: categoryValue,
+      category: product.category || productCategory,
       name: product.name || '',
       brand: product.brand || '',
-      price: product.price || product.finalPrice || '',
-      originalPrice: product.originalPrice || product.price || '',
-      discountPercent: product.discountPercent || 0,
+      price: price || '',
+      originalPrice: originalPrice || '',
+      discountPercent: calculatedDiscount,
       subCategory: product.subCategory || '',
       stock: product.stock || 10,
       images: product.images?.join(', ') || '',
@@ -491,6 +473,21 @@ const AdminDashboard = () => {
       isNewArrival: product.isNewArrival || false,
       onSale: product.onSale || false,
       isFeatured: product.isFeatured || false,
+      // Watch specific fields
+      model: product.model || '',
+      functions: product.functions || '',
+      dialColor: product.dialColor || '',
+      dialSize: product.dialSize || '',
+      strapColor: product.strapColor || '',
+      strapMaterial: product.strapMaterial || '',
+      crystalMaterial: product.crystalMaterial || '',
+      lockType: product.lockType || '',
+      waterResistance: product.waterResistance || '',
+      calendarType: product.calendarType || '',
+      movement: product.movement || '',
+      itemWeight: product.itemWeight || '',
+      quality: product.quality || '',
+      warranty: product.warranty || '',
     });
     setActiveSection('edit-product');
   };
@@ -499,27 +496,41 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const payload = {
-        ...productForm,
+        category: productForm.category,
+        name: productForm.name,
+        brand: productForm.brand,
+        subCategory: productForm.subCategory || '',
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
         stock: Number(productForm.stock || 0),
         images: productForm.images
-          ? productForm.images.split(',').map((img) => img.trim())
+          ? productForm.images.split(',').map((img) => img.trim()).filter(Boolean)
           : [],
+        description: productForm.description || '',
+        isNewArrival: Boolean(productForm.isNewArrival),
+        onSale: Boolean(productForm.onSale),
+        isFeatured: Boolean(productForm.isFeatured),
+        // Watch specific fields
+        model: productForm.model || '',
+        functions: productForm.functions || '',
+        dialColor: productForm.dialColor || '',
+        dialSize: productForm.dialSize || '',
+        strapColor: productForm.strapColor || '',
+        strapMaterial: productForm.strapMaterial || '',
+        crystalMaterial: productForm.crystalMaterial || '',
+        lockType: productForm.lockType || '',
+        waterResistance: productForm.waterResistance || '',
+        calendarType: productForm.calendarType || '',
+        movement: productForm.movement || '',
+        itemWeight: productForm.itemWeight || '',
+        quality: productForm.quality || '',
+        warranty: productForm.warranty || '',
       };
-      if (navCategories.length > 0 && productForm.category) {
-        const navCat = navCategories.find((c) => c.slug === productForm.category);
-        if (navCat) {
-          payload.category = navCat.productType;
-          payload.subCategory = productForm.subCategory;
-          if (navCat.gender) payload.gender = navCat.gender;
-        }
-      }
       await adminAPI.createProduct(payload);
       setMessage({ type: 'success', text: 'Product created' });
       resetForm();
-      fetchProducts(payload.category || productCategory);
+      fetchProducts(productForm.category);
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to create product' });
     }
@@ -530,7 +541,10 @@ const AdminDashboard = () => {
     if (!editingProduct) return;
     try {
       const payload = {
-        ...productForm,
+        category: productForm.category,
+        name: productForm.name,
+        brand: productForm.brand,
+        subCategory: productForm.subCategory || '',
         price: Number(productForm.price),
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
@@ -538,23 +552,30 @@ const AdminDashboard = () => {
         images: productForm.images
           ? productForm.images.split(',').map((img) => img.trim())
           : [],
+        description: productForm.description || '',
+        isNewArrival: Boolean(productForm.isNewArrival),
+        onSale: Boolean(productForm.onSale),
+        isFeatured: Boolean(productForm.isFeatured),
+        // Watch specific fields
+        model: productForm.model || '',
+        functions: productForm.functions || '',
+        dialColor: productForm.dialColor || '',
+        dialSize: productForm.dialSize || '',
+        strapColor: productForm.strapColor || '',
+        strapMaterial: productForm.strapMaterial || '',
+        crystalMaterial: productForm.crystalMaterial || '',
+        lockType: productForm.lockType || '',
+        waterResistance: productForm.waterResistance || '',
+        calendarType: productForm.calendarType || '',
+        movement: productForm.movement || '',
+        itemWeight: productForm.itemWeight || '',
+        quality: productForm.quality || '',
+        warranty: productForm.warranty || '',
       };
-      let backendCategory = productCategory;
-      if (navCategories.length > 0 && productForm.category) {
-        const navCat = navCategories.find((c) => c.slug === productForm.category);
-        if (navCat) {
-          payload.category = navCat.productType;
-          payload.subCategory = productForm.subCategory;
-          backendCategory = navCat.productType;
-          if (navCat.gender) payload.gender = navCat.gender;
-        }
-      } else {
-        payload.category = productCategory;
-      }
       await adminAPI.updateProduct(editingProduct._id, payload);
       setMessage({ type: 'success', text: 'Product updated' });
       resetForm();
-      fetchProducts(backendCategory);
+      fetchProducts(productForm.category);
       setActiveSection('products');
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to update product' });
@@ -564,11 +585,9 @@ const AdminDashboard = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Delete this product?')) return;
     try {
-      const catForApi =
-        activeSection === 'products' && navCategories.length > 0 ? backendCategoryForViewProducts : productCategory;
-      await adminAPI.deleteProduct(id, catForApi);
+      await adminAPI.deleteProduct(id, productCategory);
       setMessage({ type: 'success', text: 'Product deleted' });
-      fetchProducts(catForApi);
+      fetchProducts(productCategory);
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to delete product' });
     }
@@ -578,9 +597,9 @@ const AdminDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F4EE] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -589,14 +608,14 @@ const AdminDashboard = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white border rounded-2xl shadow-sm max-w-lg w-full p-10 text-center space-y-4">
+      <div className="min-h-screen bg-[#F7F4EE] flex items-center justify-center px-4">
+        <div className="bg-white border border-[#E8E4DD] rounded-2xl shadow-sm max-w-lg w-full p-10 text-center space-y-4">
           <div className="text-4xl">🚫</div>
           <h1 className="text-2xl font-bold text-gray-900">Admin access only</h1>
           <p className="text-gray-600">You need an admin account to view this page.</p>
           <Link
             to="/profile"
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
           >
             Back to profile
           </Link>
@@ -614,7 +633,7 @@ const AdminDashboard = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard Overview</h2>
               <button
                 onClick={fetchSummary}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 rounded-lg w-full sm:w-auto"
+                className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 rounded-lg w-full sm:w-auto"
               >
                 Refresh
               </button>
@@ -622,22 +641,22 @@ const AdminDashboard = () => {
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {summary ? (
                 <>
-                  <div className="bg-white rounded-2xl border p-4 sm:p-5 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Revenue</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
                       ₹{summary.totalRevenue.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-white rounded-2xl border p-4 sm:p-5 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Orders</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalOrders}</p>
                     <p className="text-xs text-gray-500">{summary.pendingOrders} pending</p>
                   </div>
-                  <div className="bg-white rounded-2xl border p-4 sm:p-5 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Customers</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalUsers}</p>
                   </div>
-                  <div className="bg-white rounded-2xl border p-4 sm:p-5 shadow-sm">
+                  <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Total Products</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
                       {summary.totalProducts?.toLocaleString() || 0}
@@ -652,7 +671,7 @@ const AdminDashboard = () => {
 
             {/* Category-wise Product Count */}
             {summary && summary.categoryCounts && Object.keys(summary.categoryCounts).length > 0 && (
-              <div className="bg-white rounded-2xl border p-6 shadow-sm">
+              <div className="bg-white rounded-2xl border border-[#E8E4DD] p-6 shadow-sm">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Products by Category</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {Object.entries(summary.categoryCounts).map(([category, count]) => (
@@ -679,14 +698,8 @@ const AdminDashboard = () => {
         );
 
       case 'products': {
-        // Filter by nav category gender (when viewing by nav category)
-        let filteredProducts = products;
-        if (selectedNavForViewProducts?.gender) {
-          filteredProducts = filteredProducts.filter(
-            (p) => (p.gender || '').toLowerCase() === selectedNavForViewProducts.gender.toLowerCase()
-          );
-        }
         // Filter by subcategory if selected
+        let filteredProducts = products;
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
             const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
@@ -747,19 +760,11 @@ const AdminDashboard = () => {
                   }}
                   className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
                 >
-                  {productCategoryOptionsFromNav.length > 0 ? (
-                    productCategoryOptionsFromNav.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))
-                  ) : (
-                    categoryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))
-                  )}
+                  {productCategoryOptionsFromNav.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
                 <select
                   value={sortBy}
@@ -776,10 +781,8 @@ const AdminDashboard = () => {
               </div>
             </div>
             
-            {/* Subcategory Filter Buttons - from Nav Categories when available */}
-            {(viewSubCategoryOptionsFromNav.length > 0 ||
-              (subCategoryOptions[backendCategoryForViewProducts] &&
-                subCategoryOptions[backendCategoryForViewProducts].length > 0)) && (
+            {/* Subcategory Filter Buttons - from Nav Categories */}
+            {viewSubCategoryOptionsFromNav.length > 0 && (
               <div className="bg-white rounded-lg border p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-sm font-medium text-gray-700">Filter by Sub Category:</span>
@@ -809,39 +812,22 @@ const AdminDashboard = () => {
                   >
                     All
                   </button>
-                  {viewSubCategoryOptionsFromNav.length > 0
-                    ? viewSubCategoryOptionsFromNav.map((subOpt, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            setSelectedSubCategory(subOpt.value);
-                            setCurrentPage(1);
-                          }}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                            selectedSubCategory === subOpt.value
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {subOpt.label}
-                        </button>
-                      ))
-                    : subCategoryOptions[backendCategoryForViewProducts]?.map((subCat) => (
-                        <button
-                          key={subCat}
-                          onClick={() => {
-                            setSelectedSubCategory(subCat);
-                            setCurrentPage(1);
-                          }}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                            selectedSubCategory === subCat
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {subCat.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                        </button>
-                      ))}
+                  {viewSubCategoryOptionsFromNav.map((subOpt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedSubCategory(subOpt.value);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                        selectedSubCategory === subOpt.value
+                          ? 'bg-amber-500 text-gray-900'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {subOpt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -899,7 +885,7 @@ const AdminDashboard = () => {
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => handleEditProduct(product)}
-                          className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white hover:bg-blue-700 rounded"
+                          className="flex-1 px-3 py-2 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded"
                       >
                         Edit
                       </button>
@@ -924,7 +910,7 @@ const AdminDashboard = () => {
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === 1
                           ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-900 text-white hover:bg-gray-800'
                       }`}
                     >
                       Previous
@@ -949,7 +935,7 @@ const AdminDashboard = () => {
                             onClick={() => setCurrentPage(pageNum)}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                               currentPage === pageNum
-                                ? 'bg-blue-600 text-white'
+                                ? 'bg-amber-500 text-gray-900'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                           >
@@ -965,7 +951,7 @@ const AdminDashboard = () => {
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === totalPages
                           ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-900 text-white hover:bg-gray-800'
                       }`}
                     >
                       Next
@@ -1100,6 +1086,7 @@ const AdminDashboard = () => {
                     onChange={handleProductFormChange}
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
                 </div>
               </div>
               <div>
@@ -1124,6 +1111,173 @@ const AdminDashboard = () => {
                   placeholder="Product description"
                 />
               </div>
+
+              {/* Watch Details Section */}
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Watch Details (Optional)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Model</label>
+                    <input
+                      name="model"
+                      type="text"
+                      value={productForm.model}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. FS5061"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Functions</label>
+                    <input
+                      name="functions"
+                      type="text"
+                      value={productForm.functions}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Time, Date, Chrono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Dial Color</label>
+                    <input
+                      name="dialColor"
+                      type="text"
+                      value={productForm.dialColor}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Black, Blue"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Dial Size</label>
+                    <input
+                      name="dialSize"
+                      type="text"
+                      value={productForm.dialSize}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 42mm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Strap Color</label>
+                    <input
+                      name="strapColor"
+                      type="text"
+                      value={productForm.strapColor}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Brown, Silver"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Strap Material</label>
+                    <input
+                      name="strapMaterial"
+                      type="text"
+                      value={productForm.strapMaterial}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Leather, Steel"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Crystal Material</label>
+                    <input
+                      name="crystalMaterial"
+                      type="text"
+                      value={productForm.crystalMaterial}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Mineral, Sapphire"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Lock Type</label>
+                    <input
+                      name="lockType"
+                      type="text"
+                      value={productForm.lockType}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Clasp, Buckle"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Water Resistance</label>
+                    <input
+                      name="waterResistance"
+                      type="text"
+                      value={productForm.waterResistance}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 50m, 100m"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Calendar Type</label>
+                    <input
+                      name="calendarType"
+                      type="text"
+                      value={productForm.calendarType}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Date, Day-Date"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Movement</label>
+                    <input
+                      name="movement"
+                      type="text"
+                      value={productForm.movement}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Quartz, Automatic"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Item Weight</label>
+                    <input
+                      name="itemWeight"
+                      type="text"
+                      value={productForm.itemWeight}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 150g"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Quality</label>
+                    <input
+                      name="quality"
+                      type="text"
+                      value={productForm.quality}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Premium, Standard"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Warranty</label>
+                    <input
+                      name="warranty"
+                      type="text"
+                      value={productForm.warranty}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 1 Year, 2 Years"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2">
                   <input
@@ -1159,7 +1313,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white font-semibold hover:bg-blue-700 rounded-lg w-full sm:w-auto"
+                  className="px-6 py-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 rounded-lg w-full sm:w-auto"
                 >
                   Add Product
                 </button>
@@ -1185,7 +1339,7 @@ const AdminDashboard = () => {
                 onChange={(e) => setProductCategory(e.target.value)}
                 className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
               >
-                {categoryOptions.map((opt) => (
+                {productCategoryOptionsFromNav.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -1210,12 +1364,6 @@ const AdminDashboard = () => {
                           {opt.label}
                         </option>
                       ))}
-                      {productCategoryOptionsFromNav.length === 0 &&
-                        categoryOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
                       {editingProduct &&
                         productForm.category &&
                         !productCategoryOptionsFromNav.some((o) => o.value === productForm.category) && (
@@ -1243,15 +1391,8 @@ const AdminDashboard = () => {
                           {subOpt.label}
                         </option>
                       ))}
-                      {productSubCategoryOptionsFromNav.length === 0 &&
-                        productForm.category &&
-                        subCategoryOptions[productForm.category]?.map((subCat) => (
-                          <option key={subCat} value={subCat}>
-                            {subCat.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                          </option>
-                        ))}
                     </select>
-                    {productForm.category && productSubCategoryOptionsFromNav.length === 0 && !subCategoryOptions[productForm.category] && (
+                    {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
                       <p className="text-xs text-gray-500 mt-1">No sub-items for this category</p>
                     )}
                   </div>
@@ -1320,6 +1461,7 @@ const AdminDashboard = () => {
                       onChange={handleProductFormChange}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
                   </div>
                 </div>
                 <div>
@@ -1342,6 +1484,173 @@ const AdminDashboard = () => {
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
+
+                {/* Watch Details Section */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Watch Details (Optional)
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Model</label>
+                      <input
+                        name="model"
+                        type="text"
+                        value={productForm.model}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. FS5061"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Functions</label>
+                      <input
+                        name="functions"
+                        type="text"
+                        value={productForm.functions}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Time, Date, Chrono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Dial Color</label>
+                      <input
+                        name="dialColor"
+                        type="text"
+                        value={productForm.dialColor}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Black, Blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Dial Size</label>
+                      <input
+                        name="dialSize"
+                        type="text"
+                        value={productForm.dialSize}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. 42mm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Strap Color</label>
+                      <input
+                        name="strapColor"
+                        type="text"
+                        value={productForm.strapColor}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Brown, Silver"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Strap Material</label>
+                      <input
+                        name="strapMaterial"
+                        type="text"
+                        value={productForm.strapMaterial}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Leather, Steel"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Crystal Material</label>
+                      <input
+                        name="crystalMaterial"
+                        type="text"
+                        value={productForm.crystalMaterial}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Mineral, Sapphire"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Lock Type</label>
+                      <input
+                        name="lockType"
+                        type="text"
+                        value={productForm.lockType}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Clasp, Buckle"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Water Resistance</label>
+                      <input
+                        name="waterResistance"
+                        type="text"
+                        value={productForm.waterResistance}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. 50m, 100m"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Calendar Type</label>
+                      <input
+                        name="calendarType"
+                        type="text"
+                        value={productForm.calendarType}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Date, Day-Date"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Movement</label>
+                      <input
+                        name="movement"
+                        type="text"
+                        value={productForm.movement}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Quartz, Automatic"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Item Weight</label>
+                      <input
+                        name="itemWeight"
+                        type="text"
+                        value={productForm.itemWeight}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. 150g"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Quality</label>
+                      <input
+                        name="quality"
+                        type="text"
+                        value={productForm.quality}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Premium, Standard"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Warranty</label>
+                      <input
+                        name="warranty"
+                        type="text"
+                        value={productForm.warranty}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. 1 Year, 2 Years"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2">
                     <input
@@ -1377,7 +1686,7 @@ const AdminDashboard = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white font-semibold hover:bg-blue-700 rounded-lg w-full sm:w-auto"
+                    className="px-6 py-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 rounded-lg w-full sm:w-auto"
                   >
                     Update Product
                   </button>
@@ -1398,7 +1707,7 @@ const AdminDashboard = () => {
                 <p className="text-gray-600">Select a product from "View Products" to edit</p>
                 <button
                   onClick={() => setActiveSection('products')}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg"
                 >
                   View Products
                 </button>
@@ -1417,7 +1726,7 @@ const AdminDashboard = () => {
                 onChange={(e) => setProductCategory(e.target.value)}
                 className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
               >
-                {categoryOptions.map((opt) => (
+                {productCategoryOptionsFromNav.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -1463,100 +1772,33 @@ const AdminDashboard = () => {
             <div className="bg-white rounded-xl border p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingCategory ? 'Edit Category' : 'Add Category'}</h3>
               <form onSubmit={editingCategory ? handleUpdateCategory : handleCreateCategory} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input
-                      name="name"
-                      value={categoryForm.name}
-                      onChange={handleCategoryFormChange}
-                      required
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. Men's Watches"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Slug (URL id)</label>
-                    <input
-                      name="slug"
-                      value={categoryForm.slug}
-                      onChange={handleCategoryFormChange}
-                      required
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. mens-watches"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
-                    <select
-                      name="productType"
-                      value={categoryForm.productType}
-                      onChange={handleCategoryFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    >
-                      {productTypeOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender (optional)</label>
-                    <select
-                      name="gender"
-                      value={categoryForm.gender}
-                      onChange={handleCategoryFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    >
-                      <option value="">— None —</option>
-                      <option value="men">Men</option>
-                      <option value="women">Women</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-0.5">For Watches / Accessories</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SubCategory (optional)</label>
-                    <input
-                      name="subCategory"
-                      value={categoryForm.subCategory}
-                      onChange={handleCategoryFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. wallet, belt, analog"
-                    />
-                    <p className="text-xs text-gray-500 mt-0.5">Link URL is built automatically</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Order (display order)</label>
-                    <input
-                      name="order"
-                      type="number"
-                      min="0"
-                      value={categoryForm.order}
-                      onChange={handleCategoryFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category name</label>
+                  <input
+                    name="name"
+                    value={categoryForm.name}
+                    onChange={handleCategoryFormChange}
+                    required
+                    className="w-full border rounded-lg px-3 py-2 text-sm max-w-md"
+                    placeholder="e.g. Men's Watches"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">URL slug is generated automatically from the name.</p>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Sub-items (dropdown links)</label>
-                    <button type="button" onClick={handleAddSubItemRow} className="text-sm text-blue-600 hover:underline">+ Add row</button>
+                    <label className="block text-sm font-medium text-gray-700">Subcategories</label>
+                    <button type="button" onClick={handleAddSubItemRow} className="text-sm text-blue-600 hover:underline">+ Add subcategory</button>
                   </div>
-                  <p className="text-xs text-gray-500 mb-2">Label + optional subCategory (e.g. analog, smart). Path is built automatically.</p>
+                  <p className="text-xs text-gray-500 mb-2">Add one or more subcategories. They will appear as dropdown links under this category.</p>
                   <div className="space-y-2">
                     {subItemInputs.map((sub, idx) => (
                       <div key={idx} className="flex flex-wrap gap-2 items-center">
                         <input
-                          value={sub.name}
+                          value={sub.name || ''}
                           onChange={(e) => handleSubItemChange(idx, 'name', e.target.value)}
-                          className="border rounded px-2 py-1.5 text-sm w-36"
-                          placeholder="Label (e.g. View All)"
-                        />
-                        <input
-                          value={sub.subCategory}
-                          onChange={(e) => handleSubItemChange(idx, 'subCategory', e.target.value)}
-                          className="border rounded px-2 py-1.5 text-sm flex-1 min-w-[120px]"
-                          placeholder="SubCategory (e.g. analog, smart)"
+                          className="border rounded px-2 py-1.5 text-sm w-48"
+                          placeholder="e.g. View All, Analog, Smart"
                         />
                         <button type="button" onClick={() => handleRemoveSubItem(idx)} className="text-red-600 text-sm">Remove</button>
                       </div>
@@ -1565,7 +1807,7 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="flex gap-3">
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+                  <button type="submit" className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800">
                     {editingCategory ? 'Update Category' : 'Add Category'}
                   </button>
                   {editingCategory && (
@@ -1590,9 +1832,9 @@ const AdminDashboard = () => {
                     <li key={cat._id} className="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-gray-100 last:border-0">
                       <div>
                         <p className="font-medium text-gray-900">{cat.name}</p>
-                        <p className="text-xs text-gray-500">{cat.path} · {cat.productType}</p>
+                        <p className="text-xs text-gray-500">{cat.path}</p>
                         {cat.subItems?.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">Sub: {cat.subItems.map((s) => s.name).join(', ')}</p>
+                          <p className="text-xs text-gray-500 mt-1">Subcategories: {cat.subItems.map((s) => s.name).join(', ')}</p>
                         )}
                       </div>
                       <div className="flex gap-2">
@@ -1652,7 +1894,7 @@ const AdminDashboard = () => {
                                 order.status === 'delivered'
                                   ? 'bg-green-100 text-green-800'
                                   : order.status === 'shipped'
-                                  ? 'bg-blue-100 text-blue-800'
+                                  ? 'bg-indigo-100 text-indigo-800'
                                   : order.status === 'processing'
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : order.status === 'cancelled'
@@ -1821,7 +2063,7 @@ const AdminDashboard = () => {
                                 order.status === 'delivered'
                                   ? 'bg-green-100 text-green-800'
                                   : order.status === 'shipped'
-                                  ? 'bg-blue-100 text-blue-800'
+                                  ? 'bg-indigo-100 text-indigo-800'
                                   : order.status === 'processing'
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : order.status === 'cancelled'
@@ -1930,7 +2172,7 @@ const AdminDashboard = () => {
                               {user.name || 'No Name'}
                             </h3>
                             {user.isAdmin && (
-                              <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wide bg-blue-100 text-blue-800">
+                              <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-800">
                                 Admin
                               </span>
                             )}
@@ -1988,7 +2230,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#F7F4EE] flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -1999,18 +2241,18 @@ const AdminDashboard = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex-shrink-0 h-screen lg:h-screen transition-transform duration-300 ${
+        className={`fixed lg:sticky top-0 left-0 z-50 w-64 bg-gray-900 flex-shrink-0 h-screen lg:h-screen transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="text-xs text-gray-500 mt-1">Control Center</p>
+            <h1 className="text-lg sm:text-xl font-bold text-white">Admin Panel</h1>
+          <p className="text-xs text-gray-400 mt-1">Control Center</p>
         </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-600 hover:text-gray-900"
+            className="lg:hidden text-gray-400 hover:text-white"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2028,19 +2270,19 @@ const AdminDashboard = () => {
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors mb-1 rounded ${
                 activeSection === item.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-amber-500 text-gray-900'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               }`}
             >
-              <item.icon className={`w-5 h-5 flex-shrink-0 ${activeSection === item.id ? 'text-white' : 'text-gray-600'}`} />
+              <item.icon className={`w-5 h-5 flex-shrink-0 ${activeSection === item.id ? 'text-gray-900' : 'text-gray-400'}`} />
               <span className="font-medium text-sm sm:text-base">{item.label}</span>
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-gray-200 mt-auto">
+        <div className="p-4 border-t border-gray-700 mt-auto">
           <Link
             to="/"
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors rounded"
+            className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors rounded"
             onClick={() => setSidebarOpen(false)}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

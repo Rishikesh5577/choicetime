@@ -1000,6 +1000,61 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              {/* Watch Specifications - Only show if any watch field exists */}
+              {(() => {
+                // Check for watch-specific fields (support both naming conventions)
+                const specs = [
+                  { label: 'Model', value: product.model || product.productDetails?.modelNumber },
+                  { label: 'Functions', value: product.functions || product.productDetails?.function },
+                  { label: 'Dial Color', value: product.dialColor },
+                  { label: 'Dial Size', value: product.dialSize || product.caseWidth },
+                  { label: 'Strap Color', value: product.strapColor || product.bandColor || product.productDetails?.strapColor },
+                  { label: 'Strap Material', value: product.strapMaterial || product.bandMaterial || product.productDetails?.strapMaterial },
+                  { label: 'Crystal Material', value: product.crystalMaterial || product.glassMaterial },
+                  { label: 'Case Material', value: product.caseMaterial },
+                  { label: 'Case Shape', value: product.caseShape },
+                  { label: 'Lock Type', value: product.lockType || product.productDetails?.lockMechanism },
+                  { label: 'Water Resistance', value: product.waterResistance },
+                  { label: 'Display Type', value: product.displayType },
+                  { label: 'Calendar Type', value: product.calendarType },
+                  { label: 'Movement', value: product.movement || product.movementType || product.productDetails?.movement },
+                  { label: 'Item Weight', value: product.itemWeight },
+                  { label: 'Quality', value: product.quality },
+                  { label: 'Warranty', value: product.warranty },
+                ].filter(spec => spec.value);
+
+                if (specs.length === 0) return null;
+
+                return (
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-200 bg-gray-50">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Watch Specifications
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {specs.map((spec, index) => (
+                            <tr key={spec.label} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-5 py-3 font-medium text-gray-900 whitespace-nowrap w-40 border-r border-gray-100">
+                                {spec.label}
+                              </td>
+                              <td className="px-5 py-3 text-gray-700">
+                                {spec.value}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Delivery & Returns Info */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping & Returns</h3>

@@ -102,13 +102,15 @@ const ProductCard = ({ product }) => {
   };
 
 
+  // Calculate discount percentage
+  const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
+
   return (
     <>
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       
       <div 
-        // OPTIMIZATION: translate-z-0 forces hardware acceleration
-        className="group relative w-full select-none transform-gpu translate-z-0" 
+        className="group relative w-full select-none transform-gpu bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300" 
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => {
           setIsHovered(false);
@@ -120,17 +122,16 @@ const ProductCard = ({ product }) => {
         <Link to={`/product/${productId}`} className="block">
           
           {/* IMAGE AREA */}
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm">
+          <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
             
-
-            {/* Discount Tag */}
+            {/* Discount Badge */}
             {hasDiscount && (
-               <span className="absolute top-3 left-3 z-20 bg-black text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">
-                 Sale
-               </span>
+              <span className="absolute top-2 left-2 z-20 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+                {discountPercent}% OFF
+              </span>
             )}
 
-            {/* Base Image - Always visible */}
+            {/* Base Image */}
             {defaultImageSrc && (
               <img
                 src={defaultImageSrc}
@@ -140,16 +141,16 @@ const ProductCard = ({ product }) => {
                 loading="lazy"
                 className={`
                   absolute inset-0 w-full h-full object-cover transition-all duration-500
-                  ${imageLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'}
+                  ${imageLoaded ? 'opacity-100' : 'opacity-0'}
+                  ${isHovered && hoverImageSrc && hoverImageLoaded ? 'opacity-0' : 'opacity-100'}
                 `}
                 onError={handleImageError}
               />
             )}
 
-            {/* Hover Image - Appears as cover on hover */}
+            {/* Hover Image */}
             {hoverImageSrc && (
               <>
-                {/* Preload hover image */}
                 <img
                   src={hoverImageSrc}
                   alt=""
@@ -157,113 +158,99 @@ const ProductCard = ({ product }) => {
                   onLoad={() => setHoverImageLoaded(true)}
                   decoding="async"
                 />
-                {/* Hover cover image */}
                 <img
                   src={hoverImageSrc}
                   alt={product.name || product.title || 'Product'}
                   className={`
-                    absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out
-                    ${isHovered && hoverImageLoaded ? 'opacity-100 z-10' : 'opacity-0 z-0'}
+                    absolute inset-0 w-full h-full object-cover transition-opacity duration-500
+                    ${isHovered && hoverImageLoaded ? 'opacity-100' : 'opacity-0'}
                   `}
                   onError={handleImageError}
                 />
               </>
             )}
 
-            {/* --- THE FLOATING DOCK --- */}
-            <div className="absolute bottom-3 inset-x-2 sm:inset-x-4 z-20">
-              <div 
-                className={`
-                  bg-white/95 backdrop-blur-md rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] 
-                  overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]
-                  ${showSizes ? 'py-3' : 'h-10 sm:h-12 flex items-center justify-between pl-3 pr-1'}
-                `}
-                onClick={(e) => e.preventDefault()}
-              >
-                {!showSizes ? (
-                  <>
-                    <div className="flex flex-col leading-none justify-center">
-                      <span className="font-bold text-gray-900 text-sm sm:text-base">
-                        {finalPrice > 0 ? `₹${finalPrice.toLocaleString()}` : 'Price N/A'}
-                      </span>
-                      {hasDiscount && originalPrice > 0 && (
-                        <span className="text-[10px] text-gray-500 line-through">₹{originalPrice.toLocaleString()}</span>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={handleAddClick}
-                      className="h-8 sm:h-10 px-3 sm:px-5 bg-black text-white rounded-md text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-transform active:scale-95 flex items-center gap-1.5"
-                    >
-                      <span className='hidden lg:block'>Add</span>
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                    </button>
-                  </>
-                ) : (
-                  <div className="relative px-2 text-center w-full animate-fadeIn">
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Select Size</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowSizes(false);
-                        }}
-                        className="p-1 -mr-1 text-gray-400 hover:text-gray-900"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+          </div>
 
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {sizes.slice(0, 4).map((size) => (
-                        <button
-                          key={size}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleAddToCart(size);
-                          }}
-                          disabled={isAdding}
-                          className={`
-                            h-8 rounded text-xs font-bold border transition-colors touch-manipulation
-                            ${isAdding 
-                              ? 'bg-gray-100 text-gray-300 border-gray-100'
-                              : 'border-gray-200 hover:border-black hover:bg-black hover:text-white text-gray-800 active:bg-black active:text-white'}
-                          `}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+          {/* PRODUCT INFO */}
+          <div className="p-3">
+            {/* Brand / Category */}
+            <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-1">
+              {product.brand || product.category || 'Brand'}
+            </p>
+            
+            {/* Product Name */}
+            <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-2">
+              {product.name || product.title || 'Product Name'}
+            </h3>
+            
+            {/* Price Section */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg font-bold text-gray-900">
+                ₹{finalPrice > 0 ? finalPrice.toLocaleString() : '0'}
+              </span>
+              {hasDiscount && (
+                <span className="text-sm text-gray-400 line-through">
+                  ₹{originalPrice.toLocaleString()}
+                </span>
+              )}
+            </div>
+            
+            {/* Rating - only show if rating exists and is greater than 0 */}
+            {product.rating > 0 && (
+              <div className="flex items-center gap-1 mb-3">
+                <div className="flex items-center gap-0.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  <span>{product.rating}</span>
+                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+                {product.reviewCount > 0 && (
+                  <span className="text-[10px] text-gray-400">({product.reviewCount})</span>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* TEXT INFO */}
-          <div className="mt-3 px-1">
-             <div className="flex justify-between items-start">
-               <div className="flex-1 pr-2">
-                  <h3 className="text-sm font-medium text-gray-900 leading-tight line-clamp-1">
-                    {product.name}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{product.category}</p>
-               </div>
-               
-               {product.rating && product.rating > 0 && (
-                 <div className="hidden sm:flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-[10px] font-bold text-gray-600">
-                   <span>★</span>
-                   <span>{product.rating}</span>
-                 </div>
-               )}
-             </div>
+            )}
           </div>
         </Link>
+        
+        {/* Add to Cart Button - Always visible below product info */}
+        <div className="px-3 pb-3">
+          {!showSizes ? (
+            <button
+              onClick={handleAddClick}
+              className="w-full py-2.5 bg-black text-white text-xs font-bold uppercase tracking-wide rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              {sizes.length > 0 ? 'Select Size' : 'Add to Cart'}
+            </button>
+          ) : (
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-gray-500 uppercase font-bold">Select Size</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSizes(false); }}
+                  className="p-1 text-gray-400 hover:text-gray-900"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {sizes.slice(0, 4).map((size) => (
+                  <button
+                    key={size}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(size); }}
+                    disabled={isAdding}
+                    className={`h-8 rounded text-xs font-bold border transition-colors
+                      ${isAdding ? 'bg-gray-200 text-gray-400' : 'bg-white border-gray-300 hover:bg-black hover:text-white'}`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
