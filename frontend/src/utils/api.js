@@ -298,6 +298,28 @@ export const adminAPI = {
     }),
   deleteCategory: async (id) =>
     apiRequest(`/admin/categories/${id}`, { method: 'DELETE' }),
+  
+  // Reel management
+  getReels: async () => apiRequest('/reels/admin'),
+  createReel: async (payload) =>
+    apiRequest('/reels', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateReel: async (id, payload) =>
+    apiRequest(`/reels/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteReel: async (id) =>
+    apiRequest(`/reels/${id}`, { method: 'DELETE' }),
+  toggleReelStatus: async (id) =>
+    apiRequest(`/reels/${id}/toggle`, { method: 'PATCH' }),
+};
+
+// Public Reel API (for home page)
+export const reelAPI = {
+  getReels: async () => apiRequest('/reels'),
 };
 
 // Review API calls

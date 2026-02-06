@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { adminAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { uploadVideoToCloudinary } from '../utils/cloudinary';
 
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -60,6 +61,18 @@ const IconCategories = (props) => (
   </svg>
 );
 
+const IconHome = (props) => (
+  <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+  </svg>
+);
+
+const IconReels = (props) => (
+  <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+  </svg>
+);
+
 // Sidebar menu items
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
@@ -68,6 +81,7 @@ const menuItems = [
   { id: 'edit-product', label: 'Edit Product', icon: IconEdit },
   { id: 'delete-product', label: 'Delete Product', icon: IconDelete },
   { id: 'categories', label: 'Nav Categories', icon: IconCategories },
+  { id: 'home-reels', label: 'Home Page Reels', icon: IconReels },
   { id: 'orders', label: 'Manage Orders', icon: IconOrders },
   { id: 'order-status', label: 'Order Status', icon: IconStatus },
   { id: 'users', label: 'Manage Users', icon: IconUsers },
@@ -123,6 +137,21 @@ const AdminDashboard = () => {
   const [categoryForm, setCategoryForm] = useState({ name: '' });
   const [editingCategory, setEditingCategory] = useState(null);
   const [subItemInputs, setSubItemInputs] = useState([{ name: '' }]);
+  
+  // Reels state
+  const [reels, setReels] = useState([]);
+  const [reelForm, setReelForm] = useState({
+    title: '',
+    videoUrl: '',
+    thumbnailUrl: '',
+    productLink: '',
+    isActive: true,
+    order: 0
+  });
+  const [editingReel, setEditingReel] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const videoInputRef = useRef(null);
 
   const isAdmin = user?.isAdmin;
 
@@ -150,6 +179,9 @@ const AdminDashboard = () => {
     }
     if (activeSection === 'categories' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'products') {
       fetchNavCategories();
+    }
+    if (activeSection === 'home-reels') {
+      fetchReels();
     }
   }, [isAdmin, activeSection, productCategory]);
 
@@ -242,6 +274,161 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: error.message || 'Failed to fetch categories' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReels = async () => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getReels();
+      if (response.success) {
+        setReels(response.data.reels || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reels:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to fetch reels' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetReelForm = () => {
+    setReelForm({
+      title: '',
+      videoUrl: '',
+      thumbnailUrl: '',
+      productLink: '',
+      isActive: true,
+      order: 0
+    });
+    setEditingReel(null);
+  };
+
+  const handleReelFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setReelForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleCreateReel = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const response = await adminAPI.createReel(reelForm);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Reel added successfully!' });
+        resetReelForm();
+        fetchReels();
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to add reel' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to add reel' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateReel = async (e) => {
+    e.preventDefault();
+    if (!editingReel) return;
+    try {
+      setLoading(true);
+      const response = await adminAPI.updateReel(editingReel._id, reelForm);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Reel updated successfully!' });
+        resetReelForm();
+        fetchReels();
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to update reel' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to update reel' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReel = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this reel?')) return;
+    try {
+      setLoading(true);
+      const response = await adminAPI.deleteReel(id);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Reel deleted successfully!' });
+        fetchReels();
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to delete reel' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to delete reel' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleReelStatus = async (id) => {
+    try {
+      const response = await adminAPI.toggleReelStatus(id);
+      if (response.success) {
+        fetchReels();
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to toggle reel status' });
+    }
+  };
+
+  const handleEditReel = (reel) => {
+    setEditingReel(reel);
+    setReelForm({
+      title: reel.title,
+      videoUrl: reel.videoUrl,
+      thumbnailUrl: reel.thumbnailUrl || '',
+      productLink: reel.productLink || '',
+      isActive: reel.isActive,
+      order: reel.order || 0
+    });
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      setMessage({ type: 'error', text: 'Please select a video file' });
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Video size should be less than 100MB' });
+      return;
+    }
+
+    try {
+      setVideoUploading(true);
+      setUploadProgress(0);
+      
+      const result = await uploadVideoToCloudinary(file, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      if (result.success) {
+        setReelForm(prev => ({ ...prev, videoUrl: result.url }));
+        setMessage({ type: 'success', text: 'Video uploaded successfully!' });
+      }
+    } catch (error) {
+      console.error('Video upload error:', error);
+      setMessage({ type: 'error', text: 'Failed to upload video. Please try again.' });
+    } finally {
+      setVideoUploading(false);
+      setUploadProgress(0);
+      if (videoInputRef.current) {
+        videoInputRef.current.value = '';
+      }
     }
   };
 
@@ -847,58 +1034,89 @@ const AdminDashboard = () => {
                     Showing {startIndex + 1} to {Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} products
                   </p>
                 </div>
-                <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                  {paginatedProducts.map((product) => (
-                  <div key={product._id} className="bg-white border rounded-lg overflow-hidden">
-                    {(() => {
-                      let imageUrl = null;
-                      if (Array.isArray(product.images) && product.images.length > 0) {
-                        imageUrl = product.images[0];
-                      } else if (product.images && typeof product.images === 'object') {
-                        imageUrl = product.images.image1 || product.images.image2 || product.images.image3 || product.images.image4;
-                      } else if (typeof product.images === 'string' && product.images.trim()) {
-                        imageUrl = product.images;
-                      }
-                      if (!imageUrl) imageUrl = product.thumbnail || product.image;
-                      return imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={product.name || product.title || 'Product'}
-                          className="w-full h-48 sm:h-60 object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-48 sm:h-60 bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-400 text-sm">No Image</span>
-                        </div>
-                      );
-                    })()}
-                    <div className="p-3 sm:p-4">
-                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">{product.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">{product.brand}</p>
-                      <p className="text-base sm:text-lg font-bold text-gray-900 mt-2">
-                      ₹{product.finalPrice || product.price}
-                    </p>
-                      <p className="text-xs text-gray-500 mt-1">Stock: {product.stock}</p>
-                    <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => handleEditProduct(product)}
-                          className="flex-1 px-3 py-2 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(product._id)}
-                          className="flex-1 px-3 py-2 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
-                      >
-                        Delete
-                      </button>
-                      </div>
-                    </div>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {paginatedProducts.map((product) => {
+                          let imageUrl = null;
+                          if (Array.isArray(product.images) && product.images.length > 0) {
+                            imageUrl = product.images[0];
+                          } else if (product.images && typeof product.images === 'object') {
+                            imageUrl = product.images.image1 || product.images.image2 || product.images.image3 || product.images.image4;
+                          } else if (typeof product.images === 'string' && product.images.trim()) {
+                            imageUrl = product.images;
+                          }
+                          if (!imageUrl) imageUrl = product.thumbnail || product.image;
+                          
+                          return (
+                            <tr key={product._id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.name || product.title || 'Product'}
+                                    className="w-14 h-14 object-cover rounded-lg border"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs">No img</span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-gray-900 text-sm line-clamp-2">{product.name}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <p className="text-sm text-gray-600">{product.brand}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <p className="font-semibold text-gray-900">₹{product.finalPrice || product.price}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                  product.stock > 10 ? 'bg-green-100 text-green-700' : 
+                                  product.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {product.stock}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-center gap-2">
+                                  <button
+                                    onClick={() => handleEditProduct(product)}
+                                    className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 rounded transition-colors"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(product._id)}
+                                    className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
                 </div>
                 
                 {/* Pagination Controls */}
@@ -1703,15 +1921,92 @@ const AdminDashboard = () => {
                 </div>
               </form>
             ) : (
-              <div className="bg-white rounded-xl border p-6 text-center">
-                <p className="text-gray-600">Select a product from "View Products" to edit</p>
-                <button
-                  onClick={() => setActiveSection('products')}
-                  className="mt-4 px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg"
-                >
-                  View Products
-                </button>
-              </div>
+              <>
+                {loading ? (
+                  <p className="text-sm text-gray-500">Loading products...</p>
+                ) : products.length === 0 ? (
+                  <p className="text-sm text-gray-500">No products in this category yet.</p>
+                ) : (
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {products.map((product) => {
+                            let imageUrl = null;
+                            if (Array.isArray(product.images) && product.images.length > 0) {
+                              imageUrl = product.images[0];
+                            } else if (product.images && typeof product.images === 'object') {
+                              imageUrl = product.images.image1 || product.images.image2 || product.images.image3 || product.images.image4;
+                            } else if (typeof product.images === 'string' && product.images.trim()) {
+                              imageUrl = product.images;
+                            }
+                            if (!imageUrl) imageUrl = product.thumbnail || product.image;
+                            
+                            return (
+                              <tr key={product._id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">
+                                  {imageUrl ? (
+                                    <img
+                                      src={imageUrl}
+                                      alt={product.name || product.title || 'Product'}
+                                      className="w-14 h-14 object-cover rounded-lg border"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
+                                      <span className="text-gray-400 text-xs">No img</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="font-medium text-gray-900 text-sm line-clamp-2">{product.name}</p>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="text-sm text-gray-600">{product.brand}</p>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <p className="font-semibold text-gray-900">₹{product.finalPrice || product.price}</p>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                    product.stock > 10 ? 'bg-green-100 text-green-700' : 
+                                    product.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {product.stock}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center justify-center">
+                                    <button
+                                      onClick={() => handleEditProduct(product)}
+                                      className="px-4 py-1.5 text-xs font-medium bg-amber-500 text-gray-900 hover:bg-amber-600 rounded transition-colors"
+                                    >
+                                      Edit
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
@@ -1738,25 +2033,309 @@ const AdminDashboard = () => {
             ) : products.length === 0 ? (
               <p className="text-sm text-gray-500">No products in this category yet.</p>
             ) : (
-              <div className="space-y-3">
-                {products.map((product) => (
-                  <div
-                    key={product._id}
-                    className="bg-white rounded-xl border p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{product.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600">{product.brand}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">₹{product.finalPrice || product.price}</p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteProduct(product._id)}
-                      className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 text-sm font-semibold rounded-lg w-full sm:w-auto"
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {products.map((product) => {
+                        let imageUrl = null;
+                        if (Array.isArray(product.images) && product.images.length > 0) {
+                          imageUrl = product.images[0];
+                        } else if (product.images && typeof product.images === 'object') {
+                          imageUrl = product.images.image1 || product.images.image2 || product.images.image3 || product.images.image4;
+                        } else if (typeof product.images === 'string' && product.images.trim()) {
+                          imageUrl = product.images;
+                        }
+                        if (!imageUrl) imageUrl = product.thumbnail || product.image;
+                        
+                        return (
+                          <tr key={product._id} className="hover:bg-red-50 transition-colors">
+                            <td className="px-4 py-3">
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={product.name || product.title || 'Product'}
+                                  className="w-14 h-14 object-cover rounded-lg border"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs">No img</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-gray-900 text-sm line-clamp-2">{product.name}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-gray-600">{product.brand}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="font-semibold text-gray-900">₹{product.finalPrice || product.price}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                product.stock > 10 ? 'bg-green-100 text-green-700' : 
+                                product.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {product.stock}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center">
+                                <button
+                                  onClick={() => handleDeleteProduct(product._id)}
+                                  className="px-4 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'home-reels':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Home Page Reels</h2>
+            <p className="text-sm text-gray-600">Add Instagram Reels to display on the home page.</p>
+
+            {/* Add/Edit Reel Form */}
+            <form onSubmit={editingReel ? handleUpdateReel : handleCreateReel} className="bg-white rounded-xl border p-6 space-y-4">
+              <h3 className="font-semibold text-gray-900">{editingReel ? 'Edit Reel' : 'Add New Reel'}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={reelForm.title}
+                    onChange={handleReelFormChange}
+                    required
+                    placeholder="e.g. New Collection Showcase"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Video *</label>
+                  
+                  {/* Upload Button */}
+                  <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                    <input
+                      type="file"
+                      ref={videoInputRef}
+                      accept="video/*"
+                      onChange={handleVideoUpload}
+                      className="hidden"
+                      id="video-upload"
+                    />
+                    <label
+                      htmlFor="video-upload"
+                      className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-amber-500 hover:bg-amber-50 transition-colors ${videoUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      Delete
-                    </button>
+                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">
+                        {videoUploading ? 'Uploading...' : 'Upload Video'}
+                      </span>
+                    </label>
+                    <span className="text-xs text-gray-500 self-center">or paste URL below</span>
                   </div>
-                ))}
+
+                  {/* Upload Progress */}
+                  {videoUploading && (
+                    <div className="mb-3">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{uploadProgress}% uploaded</p>
+                    </div>
+                  )}
+
+                  {/* URL Input */}
+                  <input
+                    type="url"
+                    name="videoUrl"
+                    value={reelForm.videoUrl}
+                    onChange={handleReelFormChange}
+                    required
+                    placeholder="https://res.cloudinary.com/.../video.mp4"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                  
+                  {/* Video Preview */}
+                  {reelForm.videoUrl && (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                      <video 
+                        src={reelForm.videoUrl} 
+                        className="w-32 h-48 object-cover rounded-lg border"
+                        controls
+                        muted
+                      />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL (optional)</label>
+                  <input
+                    type="url"
+                    name="thumbnailUrl"
+                    value={reelForm.thumbnailUrl}
+                    onChange={handleReelFormChange}
+                    placeholder="https://example.com/thumbnail.jpg"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Link (optional)</label>
+                  <input
+                    type="url"
+                    name="productLink"
+                    value={reelForm.productLink}
+                    onChange={handleReelFormChange}
+                    placeholder="e.g. /product/watch-123 or full URL"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Add product link to show "Buy Now" button below reel</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                  <input
+                    type="number"
+                    name="order"
+                    value={reelForm.order}
+                    onChange={handleReelFormChange}
+                    min="0"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    id="isActive"
+                    checked={reelForm.isActive}
+                    onChange={handleReelFormChange}
+                    className="w-4 h-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500"
+                  />
+                  <label htmlFor="isActive" className="text-sm font-medium text-gray-700">Active (show on home page)</label>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-amber-500 text-gray-900 font-semibold hover:bg-amber-600 rounded-lg disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : editingReel ? 'Update Reel' : 'Add Reel'}
+                </button>
+                {editingReel && (
+                  <button
+                    type="button"
+                    onClick={resetReelForm}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Reels List */}
+            {loading && !reels.length ? (
+              <p className="text-sm text-gray-500">Loading reels...</p>
+            ) : reels.length === 0 ? (
+              <p className="text-sm text-gray-500">No reels added yet.</p>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Order</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Preview</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Title</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {reels.map((reel) => (
+                        <tr key={reel._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-600">{reel.order}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900 text-sm">{reel.title}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <video 
+                              src={reel.videoUrl}
+                              className="w-16 h-24 object-cover rounded-lg"
+                              muted
+                              onMouseEnter={(e) => e.target.play()}
+                              onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleToggleReelStatus(reel._id)}
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                reel.isActive 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {reel.isActive ? 'Active' : 'Inactive'}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleEditReel(reel)}
+                                className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 rounded transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteReel(reel._id)}
+                                className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

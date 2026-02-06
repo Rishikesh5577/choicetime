@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 // import Footer from '../components/Footer'; 
 import ProductCard from '../components/ProductCard';
+import InstagramReels from '../components/InstagramReels';
 import { productAPI } from '../utils/api';
 import { handleImageError } from '../utils/imageFallback';
 
@@ -77,6 +78,16 @@ const fetchWomen = async () => {
 
 const fetchWatches = async () => {
   const res = await productAPI.getWatches({ limit: 4 });
+  return res.success ? res.data.products : [];
+};
+
+const fetchMensWatches = async () => {
+  const res = await productAPI.getWatches({ limit: 4, gender: 'men' });
+  return res.success ? res.data.products : [];
+};
+
+const fetchWomensWatches = async () => {
+  const res = await productAPI.getWatches({ limit: 4, gender: 'women' });
   return res.success ? res.data.products : [];
 };
 
@@ -191,13 +202,15 @@ const Home = () => {
   const [womenItems, setWomenItems] = useState([]);
   const [watches, setWatches] = useState([]);
   const [accessories, setAccessories] = useState([]);
+  const [mensWatches, setMensWatches] = useState([]);
+  const [womensWatches, setWomensWatches] = useState([]);
 
   useEffect(() => {
     const loadAllData = async () => {
       setIsLoading(true);
       try {
-        const [freshDropsData, saleData, menData, womenData, watchesData, accessoriesData] = await Promise.all([
-          fetchFreshDrops(), fetchSaleItems(), fetchMen(), fetchWomen(), fetchWatches(), fetchAccessories()
+        const [freshDropsData, saleData, menData, womenData, watchesData, accessoriesData, mensWatchesData, womensWatchesData] = await Promise.all([
+          fetchFreshDrops(), fetchSaleItems(), fetchMen(), fetchWomen(), fetchWatches(), fetchAccessories(), fetchMensWatches(), fetchWomensWatches()
         ]);
         setFreshDrops(freshDropsData);
         setSaleItems(saleData);
@@ -205,6 +218,8 @@ const Home = () => {
         setWomenItems(womenData);
         setWatches(watchesData);
         setAccessories(accessoriesData);
+        setMensWatches(mensWatchesData);
+        setWomensWatches(womensWatchesData);
       } catch (error) {
         console.error("Error loading home page data:", error);
       } finally {
@@ -354,7 +369,7 @@ const Home = () => {
       </section> */}
 
       {/* --- PRODUCT CATEGORIES --- */}
-      <section className="py-12 md:py-20 bg-[#F7F4EE]">
+      <section className="pt-12 md:pt-20 pb-6 md:pb-10 bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Section Header */}
           <div className="text-center mb-10 md:mb-14">
@@ -364,77 +379,71 @@ const Home = () => {
             <p className="text-gray-500 mt-2 text-sm md:text-base">Explore our curated collections</p>
           </div>
 
-          {/* Categories Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+          {/* Categories Grid - All 8 in one row on desktop */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-2 md:gap-3">
             {[
               { 
                 label: "Men's Watches", 
                 path: '/mens-watches', 
-                image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Women's Watches", 
                 path: '/womens-watches', 
-                image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=600&sh=600'
+                image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=400&sh=400'
               },
               { 
                 label: "Men's Wallet", 
                 path: '/mens-wallet', 
-                image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Women's Wallet", 
                 path: '/womens-wallet', 
-                image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Men's Belt", 
                 path: '/mens-belts', 
-                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Women's Belt", 
                 path: '/womens-belt', 
-                image: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Men's Perfumes", 
                 path: '/mens-perfumes', 
-                image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=400&auto=format&fit=crop'
               },
               { 
                 label: "Women's Perfumes", 
                 path: '/womens-perfumes', 
-                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=600&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=400&auto=format&fit=crop'
               }
             ].map((cat) => (
               <Link
                 key={cat.path}
                 to={cat.path}
-                className="group relative block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-300"
+                className="group relative block rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-300"
               >
                 {/* Image Container */}
-                <div className="aspect-[4/5] overflow-hidden bg-gray-100">
+                <div className="aspect-square overflow-hidden bg-gray-100">
                   <img
                     src={cat.image}
                     alt={cat.label}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
                 
                 {/* Label */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <p className="text-white font-bold text-sm md:text-base text-center drop-shadow-lg">
+                <div className="absolute bottom-0 left-0 right-0 p-1.5 md:p-2">
+                  <p className="text-white font-medium text-[10px] md:text-xs text-center drop-shadow-lg leading-tight">
                     {cat.label}
                   </p>
-                  {/* Arrow Icon on Hover */}
-                  <div className="flex justify-center mt-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                    <span className="bg-white text-black text-xs font-semibold px-3 py-1 rounded-full">
-                      Shop Now
-                    </span>
-                  </div>
                 </div>
               </Link>
             ))}
@@ -442,7 +451,40 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Instagram Reels Section */}
+      <InstagramReels />
 
+      {/* Banner Section */}
+      <section className="w-full bg-[#F7F4EE]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="overflow-hidden rounded-xl shadow-md">
+            <img
+              src="https://hotgadget.in/cdn/shop/files/65_34eeecb0-6ddd-487f-ba48-e52ebcc2ba85.jpg?v=1769032871&width=1920"
+              alt="Special Offer Banner"
+              className="w-full h-auto object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Top Selling Men's Watches Section */}
+      <ProductSection
+        title="Top Selling Men's Watches"
+        subtitle="Premium timepieces for the modern gentleman"
+        products={mensWatches}
+        viewAllLink="/mens-watches"
+        isLoading={isLoading}
+      />
+
+      {/* Top Selling Women's Watches Section */}
+      <ProductSection
+        title="Top Selling Women's Watches"
+        subtitle="Elegant watches for every occasion"
+        products={womensWatches}
+        viewAllLink="/womens-watches"
+        isLoading={isLoading}
+      />
 
     </div>
   );

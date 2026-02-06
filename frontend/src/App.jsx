@@ -46,7 +46,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#F7F4EE] flex flex-col">
       {!isAdminRoute && <Navbar />}
-      <main className="flex-grow pt-[100px] md:pt-[110px]">
+      <main className={`flex-grow ${!isAdminRoute ? 'pt-[100px] md:pt-[110px]' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new-arrival" element={<SpecialCollection type="new-arrival" />} />
