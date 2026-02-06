@@ -289,7 +289,7 @@ const Home = () => {
         {/* Mobile Banner */}
         <div className="block lg:hidden w-full">
           <Link to="/sale">
-            <img src="https://res.cloudinary.com/de1bg8ivx/image/upload/v1765137539/Black_Elegant_Watch_Special_Offer_Instagram_Post_1_xjcbva.svg" alt="Mobile Banner" className="w-full h-auto object-contain block" loading="eager" />
+            <img src="https://res.cloudinary.com/daxdjob49/image/upload/v1770372020/watch_lgd7ow.jpg" alt="Mobile Banner" className="w-full h-auto object-cover block" loading="eager" />
           </Link>
         </div>
       </div>
@@ -379,8 +379,8 @@ const Home = () => {
             <p className="text-gray-500 mt-1.5 text-sm">Explore our curated collections</p>
           </div>
 
-          {/* Categories Grid - More cards per row for narrower cards */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3">
+          {/* Categories Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
             {[
               { 
                 label: "Men's Watches", 
@@ -434,20 +434,20 @@ const Home = () => {
               <Link
                 key={cat.path}
                 to={cat.path}
-                className={`group relative flex flex-col items-center text-center rounded-xl ${cat.bgColor} p-2 md:p-3 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5`}
+                className={`group relative flex flex-col items-center text-center rounded-2xl ${cat.bgColor} p-4 md:p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1`}
               >
                 {/* Category Name */}
-                <h3 className="text-[10px] md:text-xs font-semibold text-gray-800 mb-0.5 leading-tight">
+                <h3 className="text-sm md:text-base font-semibold text-gray-800 mb-0.5 leading-tight">
                   {cat.label}
                 </h3>
                 
                 {/* Premium Collection Text */}
-                <p className="text-[8px] md:text-[9px] text-gray-500 mb-1.5 md:mb-2">
+                <p className="text-[10px] md:text-xs text-gray-500 mb-3 md:mb-4">
                   Premium collection
                 </p>
                 
                 {/* Product Image */}
-                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white/60 shadow-sm">
+                <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-xl overflow-hidden bg-white/60 shadow-sm">
                   <img
                     src={cat.image}
                     alt={cat.label}
@@ -457,9 +457,9 @@ const Home = () => {
                 </div>
                 
                 {/* Shop Now Link */}
-                <div className="mt-1.5 md:mt-2 flex items-center text-blue-600 font-medium text-[8px] md:text-[10px] group-hover:text-blue-700 transition-colors">
+                <div className="mt-3 md:mt-4 flex items-center text-blue-600 font-medium text-xs md:text-sm group-hover:text-blue-700 transition-colors">
                   <span>Shop Now</span>
-                  <svg className="w-2.5 h-2.5 ml-0.5 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
