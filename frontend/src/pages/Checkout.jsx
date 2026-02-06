@@ -240,7 +240,7 @@ const Checkout = () => {
         key: key,
         amount: amount,
         currency: currency,
-        name: 'StyleTrending',
+        name: 'Choicetime',
         description: `Order for ${cart.length} item(s)`,
         order_id: orderId,
         handler: async function (response) {

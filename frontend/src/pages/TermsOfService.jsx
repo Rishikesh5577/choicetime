@@ -20,7 +20,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Agreement to Terms</h2>
             <p className="text-gray-700 leading-relaxed">
-              By accessing or using StyleTrending's website and services, you agree to be bound by these Terms of Service 
+              By accessing or using Choicetime's website and services, you agree to be bound by these Terms of Service 
               and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited 
               from using or accessing this site.
             </p>
@@ -29,7 +29,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Use License</h2>
             <p className="text-gray-700 leading-relaxed mb-3">
-              Permission is granted to temporarily access the materials on StyleTrending's website for personal, non-commercial 
+              Permission is granted to temporarily access the materials on Choicetime's website for personal, non-commercial 
               transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
@@ -126,7 +126,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Intellectual Property</h2>
             <p className="text-gray-700 leading-relaxed">
-              The website and its original content, features, and functionality are owned by StyleTrending and are protected by 
+              The website and its original content, features, and functionality are owned by Choicetime and are protected by 
               international copyright, trademark, patent, trade secret, and other intellectual property laws. You may not 
               reproduce, distribute, modify, create derivative works of, publicly display, or otherwise exploit any of the 
               content without our prior written permission.
@@ -136,7 +136,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Limitation of Liability</h2>
             <p className="text-gray-700 leading-relaxed">
-              In no event shall StyleTrending, its directors, employees, or agents be liable for any indirect, incidental, special, 
+              In no event shall Choicetime, its directors, employees, or agents be liable for any indirect, incidental, special, 
               consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other 
               intangible losses, resulting from your use of the website or services.
             </p>
@@ -145,7 +145,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Indemnification</h2>
             <p className="text-gray-700 leading-relaxed">
-              You agree to defend, indemnify, and hold harmless StyleTrending and its officers, directors, employees, and agents from 
+              You agree to defend, indemnify, and hold harmless Choicetime and its officers, directors, employees, and agents from 
               and against any claims, liabilities, damages, losses, and expenses, including without limitation, reasonable 
               attorney's fees, arising out of or in any way connected with your access to or use of the website or your violation 
               of these Terms of Service.
@@ -176,7 +176,7 @@ const TermsOfService = () => {
               If you have any questions about these Terms of Service, please contact us at:
             </p>
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-700"><strong>Email:</strong> legal@styletrending.com</p>
+              <p className="text-gray-700"><strong>Email:</strong> legal@choicetime.com</p>
               <p className="text-gray-700"><strong>Phone:</strong> +91 1800-123-4567</p>
               <p className="text-gray-700"><strong>Address:</strong> 123 Shopping Street, Mumbai, India 400001</p>
             </div>

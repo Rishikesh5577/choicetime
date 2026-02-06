@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
-              Welcome to StyleTrending. We are committed to protecting your personal information and your right to privacy. 
+              Welcome to Choicetime. We are committed to protecting your personal information and your right to privacy. 
               This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit 
               our website and use our services.
             </p>
@@ -144,7 +144,7 @@ const PrivacyPolicy = () => {
               If you have any questions about this Privacy Policy, please contact us at:
             </p>
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-700"><strong>Email:</strong> privacy@styletrending.com</p>
+              <p className="text-gray-700"><strong>Email:</strong> privacy@choicetime.com</p>
               <p className="text-gray-700"><strong>Phone:</strong> +91 1800-123-4567</p>
               <p className="text-gray-700"><strong>Address:</strong> 123 Shopping Street, Mumbai, India 400001</p>
             </div>

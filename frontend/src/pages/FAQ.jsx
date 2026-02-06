@@ -102,7 +102,7 @@ const FAQ = () => {
         },
         {
           q: 'How can I contact customer service?',
-          a: 'You can reach us via email at support@styletrending.com, call us at +91 1800-123-4567, or use the contact form on our Contact Us page. Our team is available Monday-Friday, 9 AM - 6 PM.'
+          a: 'You can reach us via email at support@choicetime.com, call us at +91 1800-123-4567, or use the contact form on our Contact Us page. Our team is available Monday-Friday, 9 AM - 6 PM.'
         },
         {
           q: 'Do you have a loyalty program?',

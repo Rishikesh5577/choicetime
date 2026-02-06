@@ -182,7 +182,7 @@ const CookiePolicy = () => {
               If you have any questions about our use of cookies, please contact us at:
             </p>
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-700"><strong>Email:</strong> privacy@styletrending.com</p>
+              <p className="text-gray-700"><strong>Email:</strong> privacy@choicetime.com</p>
               <p className="text-gray-700"><strong>Phone:</strong> +91 1800-123-4567</p>
               <p className="text-gray-700"><strong>Address:</strong> 123 Shopping Street, Mumbai, India 400001</p>
             </div>

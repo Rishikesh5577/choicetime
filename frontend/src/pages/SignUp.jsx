@@ -80,42 +80,11 @@ const SignUp = () => {
   return (
     <div className="fixed inset-0 z-50 flex min-h-screen font-sans bg-[#F7F4EE]">
 
-      {/* LEFT SIDE: Branding */}
-      <div
-        className="hidden lg:flex flex-col justify-between w-[45%] p-12 text-white relative overflow-hidden bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('https://res.cloudinary.com/de1bg8ivx/image/upload/v1765260333/UrbanVastra_1_ndsc5c.svg')" }}
-      >
-        <div className="relative z-10">
-          <div className="flex items-center gap-2.5 mb-8">
-            {/* Professional E-commerce Logo */}
-            <div className="relative">
-              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="36" height="36" rx="8" fill="rgba(255,255,255,0.15)" />
-                <path d="M12 18C12 15.5 13.5 14 16 14C18.5 14 20 15.5 20 17C20 18.5 18.5 19.5 17 20C15.5 20.5 14 21.5 14 23C14 25.5 15.5 27 18 27C20.5 27 22 25.5 22 24" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
-            </div>
-            <div>
-              <span className="text-xl font-bold text-white tracking-tight leading-none block">
-                StyleTrending
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="relative z-10 text-sm text-gray-200 drop-shadow-sm">
-          <div className="relative z-10 text-sm text-gray-200 drop-shadow-sm -ml-3">
-            <span className='text-white'>© 2024 StyleTrending.</span> All rights reserved.
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT SIDE: Form */}
-      <div className="w-full lg:w-[55%] flex flex-col justify-center items-center p-8 lg:p-16 overflow-y-auto bg-[#F7F4EE]">
+      {/* SignUp Form - Centered */}
+      <div className="w-full flex flex-col justify-center items-center p-8 lg:p-16 overflow-y-auto bg-[#F7F4EE]">
         <div className="w-full max-w-md space-y-8">
-          <h1>Sign Up for Free</h1>
-          <h1>Sign Up for Free</h1>
-          <h1></h1>
 
-          <div className="text-center lg:text-left">
+          <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Create an account</h2>
             <p className="mt-2 text-sm text-gray-600">
               Already have an account?{' '}
