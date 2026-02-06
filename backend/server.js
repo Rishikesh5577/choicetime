@@ -11,6 +11,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import reelRoutes from './routes/reelRoutes.js';
 
 dotenv.config();
 
@@ -55,6 +56,10 @@ try {
   console.error('   This will cause 404 errors for /api/reviews');
 }
 
+// Register reel routes
+app.use('/api/reels', reelRoutes);
+console.log('✅ Reel routes registered at /api/reels');
+
 console.log('✅ Payment routes registered at /api/payment');
 
 // Health check
@@ -93,6 +98,7 @@ app.listen(PORT, () => {
   console.log('   ✓ /api/profile');
   console.log('   ✓ /api/payment');
   console.log('   ✓ /api/reviews');
+  console.log('   ✓ /api/reels');
   console.log('\n✅ All routes registered successfully!\n');
   console.log('🔍 Test review routes:');
   console.log(`   GET  http://localhost:${PORT}/api/reviews/health`);
