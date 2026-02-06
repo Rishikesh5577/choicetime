@@ -446,8 +446,8 @@ const Home = () => {
                   Premium collection
                 </p>
                 
-                {/* Product Image - Smaller */}
-                <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden bg-white/60 shadow-sm">
+                {/* Product Image */}
+                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white/60 shadow-sm">
                   <img
                     src={cat.image}
                     alt={cat.label}
