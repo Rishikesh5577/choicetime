@@ -172,7 +172,7 @@ const InstagramReels = () => {
 
   if (loading) {
     return (
-      <section className="pt-6 md:pt-10 pb-12 md:pb-20 bg-[#F7F4EE]">
+      <section className="pt-2 md:pt-4 pb-12 md:pb-20 bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 md:mb-14">
             <h2 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
@@ -193,7 +193,7 @@ const InstagramReels = () => {
   }
 
   return (
-    <section className="pt-6 md:pt-10 pb-12 md:pb-20 bg-[#F7F4EE]">
+    <section className="pt-2 md:pt-4 pb-12 md:pb-20 bg-[#F7F4EE]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section Header - Matching Shop By Category style */}
         <div className="text-center mb-8 md:mb-10">

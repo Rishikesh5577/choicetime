@@ -368,82 +368,100 @@ const Home = () => {
         </div>
       </section> */}
 
-      {/* --- PRODUCT CATEGORIES --- */}
-      <section className="pt-12 md:pt-20 pb-6 md:pb-10 bg-[#F7F4EE]">
+      {/* --- SHOP BY CATEGORY SECTION --- */}
+      <section className="pt-10 pb-4 md:pt-16 md:pb-6 bg-[#F7F4EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           {/* Section Header */}
-          <div className="text-center mb-10 md:mb-14">
-            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
               Shop By Category
             </h2>
-            <p className="text-gray-500 mt-2 text-sm md:text-base">Explore our curated collections</p>
+            <p className="text-gray-500 mt-1.5 text-sm">Explore our curated collections</p>
           </div>
 
-          {/* Categories Grid - All 8 in one row on desktop */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-8 gap-2 md:gap-3">
+          {/* Categories Grid - More cards per row for narrower cards */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3">
             {[
               { 
                 label: "Men's Watches", 
                 path: '/mens-watches', 
-                image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-rose-50 via-pink-50 to-rose-100'
               },
               { 
                 label: "Women's Watches", 
                 path: '/womens-watches', 
-                image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=400&sh=400'
+                image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=400&sh=400',
+                bgColor: 'bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-100'
               },
               { 
                 label: "Men's Wallet", 
                 path: '/mens-wallet', 
-                image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100'
               },
               { 
                 label: "Women's Wallet", 
                 path: '/womens-wallet', 
-                image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-100'
               },
               { 
                 label: "Men's Belt", 
                 path: '/mens-belts', 
-                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100'
               },
               { 
                 label: "Women's Belt", 
                 path: '/womens-belt', 
-                image: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1594223274512-ad4803739b7c?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-pink-50 via-rose-50 to-red-100'
               },
               { 
                 label: "Men's Perfumes", 
                 path: '/mens-perfumes', 
-                image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-100'
               },
               { 
                 label: "Women's Perfumes", 
                 path: '/womens-perfumes', 
-                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=400&auto=format&fit=crop'
+                image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=400&auto=format&fit=crop',
+                bgColor: 'bg-gradient-to-br from-cyan-50 via-teal-50 to-emerald-100'
               }
             ].map((cat) => (
               <Link
                 key={cat.path}
                 to={cat.path}
-                className="group relative block rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-300"
+                className={`group relative flex flex-col items-center text-center rounded-xl ${cat.bgColor} p-2 md:p-3 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5`}
               >
-                {/* Image Container */}
-                <div className="aspect-square overflow-hidden bg-gray-100">
+                {/* Category Name */}
+                <h3 className="text-[10px] md:text-xs font-semibold text-gray-800 mb-0.5 leading-tight">
+                  {cat.label}
+                </h3>
+                
+                {/* Premium Collection Text */}
+                <p className="text-[8px] md:text-[9px] text-gray-500 mb-1.5 md:mb-2">
+                  Premium collection
+                </p>
+                
+                {/* Product Image - Smaller */}
+                <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden bg-white/60 shadow-sm">
                   <img
                     src={cat.image}
                     alt={cat.label}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
                   />
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
                 
-                {/* Label */}
-                <div className="absolute bottom-0 left-0 right-0 p-1.5 md:p-2">
-                  <p className="text-white font-medium text-[10px] md:text-xs text-center drop-shadow-lg leading-tight">
-                    {cat.label}
-                  </p>
+                {/* Shop Now Link */}
+                <div className="mt-1.5 md:mt-2 flex items-center text-blue-600 font-medium text-[8px] md:text-[10px] group-hover:text-blue-700 transition-colors">
+                  <span>Shop Now</span>
+                  <svg className="w-2.5 h-2.5 ml-0.5 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </Link>
             ))}
