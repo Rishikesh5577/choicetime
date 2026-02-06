@@ -52,7 +52,7 @@ const VideoReel = ({ reel }) => {
               loop
               muted={isMuted}
               playsInline
-              preload="metadata"
+              preload="auto"
               poster={reel.thumbnailUrl || undefined}
               onClick={handlePlay}
               onPlay={() => setIsPlaying(true)}
@@ -144,10 +144,24 @@ const InstagramReels = () => {
   useEffect(() => {
     const fetchReels = async () => {
       try {
-        setLoading(true);
+        // Load from cache first for instant display
+        const cached = localStorage.getItem('instagramReels');
+        if (cached) {
+          try {
+            const parsedCache = JSON.parse(cached);
+            if (parsedCache?.reels?.length) {
+              setReels(parsedCache.reels);
+              setLoading(false);
+            }
+          } catch (e) {}
+        }
+        
+        // Fetch fresh data from API
         const response = await reelAPI.getReels();
         if (response.success) {
           setReels(response.data.reels || []);
+          // Update cache
+          localStorage.setItem('instagramReels', JSON.stringify(response.data));
         }
       } catch (err) {
         console.error('Error fetching reels:', err);

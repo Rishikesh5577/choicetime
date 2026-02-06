@@ -230,7 +230,7 @@ const Home = () => {
   }, []);
 
   const carouselSlides = [
-    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770261032/image_ua7yjh.jpg', link: '/' }
+    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/f_auto,q_auto,w_1920/v1770261032/image_ua7yjh.jpg', link: '/' }
   ];
 
   // --- CAROUSEL LOGIC ---
@@ -263,6 +263,8 @@ const Home = () => {
                   alt="Banner"
                   className="w-full h-full object-cover"
                   loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "low"}
+                  decoding="async"
                   onError={(e) => handleImageError(e, 2161, 771)}
                 />
               </Link>
@@ -459,7 +461,9 @@ const Home = () => {
                     src={cat.image}
                     alt={cat.label}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    loading="lazy"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                   />
                 </div>
                 

@@ -30,13 +30,27 @@ const Navbar = () => {
 
   // --- EFFECTS ---
 
-  // Fetch nav categories from backend
+  // Fetch nav categories from backend (with localStorage cache for faster loads)
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        // Load from cache first for instant display
+        const cached = localStorage.getItem('navCategories');
+        if (cached) {
+          try {
+            const parsedCache = JSON.parse(cached);
+            if (parsedCache?.categories?.length) {
+              setNavLinks(parsedCache.categories);
+            }
+          } catch (e) {}
+        }
+        
+        // Fetch fresh data from API
         const res = await categoriesAPI.getCategories();
         if (res.success && res.data?.categories?.length) {
           setNavLinks(res.data.categories);
+          // Update cache
+          localStorage.setItem('navCategories', JSON.stringify(res.data));
         }
       } catch (err) {
         console.error('Failed to load nav categories:', err);
@@ -164,9 +178,12 @@ const Navbar = () => {
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
                 <Link to="/" className="flex-shrink-0 group relative z-10">
                   <img
-                    src="https://res.cloudinary.com/dl6hpq7mm/image/upload/v1770185345/image-removebg-preview_2_we5d7r.png"
+                    src="https://res.cloudinary.com/dl6hpq7mm/image/upload/f_auto,q_auto,w_200/v1770185345/image-removebg-preview_2_we5d7r.png"
                     alt="choicetime"
                     className="h-10 md:h-14 w-auto object-contain"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                   />
                 </Link>
               </div>
@@ -351,9 +368,11 @@ const Navbar = () => {
             <div className="flex items-center gap-3">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
                 <img
-                  src="https://res.cloudinary.com/dl6hpq7mm/image/upload/v1770185345/image-removebg-preview_2_we5d7r.png"
+                  src="https://res.cloudinary.com/dl6hpq7mm/image/upload/f_auto,q_auto,w_200/v1770185345/image-removebg-preview_2_we5d7r.png"
                   alt="choicetime"
                   className="h-12 w-auto object-contain"
+                  loading="eager"
+                  decoding="async"
                 />
               </Link>
               {isAuthenticated && <p className="text-xs text-gray-500 mt-1">Hello, {user?.name}</p>}
