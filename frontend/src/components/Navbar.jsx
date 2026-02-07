@@ -248,11 +248,11 @@ const Navbar = () => {
                   )}
                 </Link>
 
-                {/* Cart */}
-                <Link to="/cart" className="p-2 text-gray-800 hover:bg-gray-100 rounded-full transition-colors relative">
-                  <svg className="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                {/* Cart (desktop only - mobile has bottom nav) */}
+                <Link to="/cart" className="hidden md:block p-2 text-gray-800 hover:bg-gray-100 rounded-full transition-colors relative">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
                   {getCartItemsCount() > 0 && (
-                    <span className="absolute top-1 right-0.5 md:top-0 md:right-0 bg-black text-white text-[10px] w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full font-bold">
+                    <span className="absolute top-0 right-0 bg-black text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
                       {getCartItemsCount()}
                     </span>
                   )}
@@ -340,31 +340,78 @@ const Navbar = () => {
 
 
       {/* =======================
-          MOBILE FLOATING DOCK
-          (More modern than fixed bottom bar)
+          MOBILE BOTTOM NAV BAR
       ======================== */}
-      <div className="md:hidden fixed bottom-6 left-4 right-4 z-40">
-        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 p-2 flex justify-around items-center">
-          <Link to="/" className={`p-3 rounded-xl transition-all ${activeCategory === 'home' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}>
-            <svg className="w-5 h-5" fill={activeCategory === 'home' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-          </Link>
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+        <div className="bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
+          <div className="flex justify-around items-start max-w-md mx-auto">
 
-          <button onClick={() => setIsMobileMenuOpen(true)} className={`p-3 rounded-xl text-gray-500 ${isMobileMenuOpen ? 'bg-gray-100 text-black' : ''}`}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </button>
+            {/* Home */}
+            <Link to="/" className="flex flex-col items-center min-w-[3.5rem] group">
+              <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${activeCategory === 'home' ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
+                {activeCategory === 'home' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
+                <svg className="w-[22px] h-[22px]" fill={activeCategory === 'home' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeCategory === 'home' ? 0 : 1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${activeCategory === 'home' ? 'text-black font-semibold' : 'text-gray-400'}`}>Home</span>
+            </Link>
 
-          <Link to="/wishlist" className="p-3 rounded-xl text-gray-500 relative">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-            {getWishlistCount() > 0 && (
-              <span className="absolute top-1.5 right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
-                {getWishlistCount()}
-              </span>
-            )}
-          </Link>
+            {/* Categories */}
+            <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center min-w-[3.5rem] group">
+              <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${isMobileMenuOpen ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
+                {isMobileMenuOpen && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${isMobileMenuOpen ? 'text-black font-semibold' : 'text-gray-400'}`}>Shop</span>
+            </button>
 
-          <Link to={isAuthenticated ? "/profile" : "/login"} className="p-3 rounded-xl text-gray-500">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          </Link>
+            {/* Wishlist */}
+            <Link to="/wishlist" className="flex flex-col items-center min-w-[3.5rem] group">
+              <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${location.pathname === '/wishlist' ? 'text-red-500' : 'text-gray-400 group-active:scale-90'}`}>
+                {location.pathname === '/wishlist' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-red-500 rounded-full"></span>}
+                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/wishlist' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/wishlist' ? 0 : 1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                {getWishlistCount() > 0 && (
+                  <span className="absolute -top-0.5 -right-1 bg-red-500 text-white text-[8px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold px-1 ring-2 ring-white">
+                    {getWishlistCount()}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${location.pathname === '/wishlist' ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>Wishlist</span>
+            </Link>
+
+            {/* Cart */}
+            <Link to="/cart" className="flex flex-col items-center min-w-[3.5rem] group">
+              <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${location.pathname === '/cart' ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
+                {location.pathname === '/cart' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
+                <svg className="w-[22px] h-[22px]" fill={location.pathname === '/cart' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={location.pathname === '/cart' ? 0 : 1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+                {getCartItemsCount() > 0 && (
+                  <span className="absolute -top-0.5 -right-1 bg-black text-white text-[8px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-bold px-1 ring-2 ring-white">
+                    {getCartItemsCount()}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${location.pathname === '/cart' ? 'text-black font-semibold' : 'text-gray-400'}`}>Cart</span>
+            </Link>
+
+            {/* Account */}
+            <Link to={isAuthenticated ? "/profile" : "/login"} className="flex flex-col items-center min-w-[3.5rem] group">
+              <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${['/profile', '/login'].includes(location.pathname) ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
+                {['/profile', '/login'].includes(location.pathname) && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
+                <svg className="w-[22px] h-[22px]" fill={['/profile', '/login'].includes(location.pathname) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={['/profile', '/login'].includes(location.pathname) ? 0 : 1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <span className={`text-[10px] font-medium mt-0.5 ${['/profile', '/login'].includes(location.pathname) ? 'text-black font-semibold' : 'text-gray-400'}`}>Account</span>
+            </Link>
+
+          </div>
         </div>
       </div>
 

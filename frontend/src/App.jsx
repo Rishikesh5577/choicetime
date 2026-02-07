@@ -46,22 +46,22 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname, location.search]);
 
-  // Show scratch card popup after a short delay on first visit (not on admin pages)
+  // Show scratch card popup immediately on first visit (not on admin pages)
   useEffect(() => {
     if (isAdminRoute) return;
     const dismissed = localStorage.getItem('scratchCardDismissed');
     // Show again if not dismissed in the last 24 hours
     const cooldown = 24 * 60 * 60 * 1000; // 24 hours
     if (dismissed && Date.now() - Number(dismissed) < cooldown) return;
-    const timer = setTimeout(() => setShowScratchCard(true), 3000);
-    return () => clearTimeout(timer);
+    setShowScratchCard(true);
+    return;
   }, [isAdminRoute]);
 
   return (
     <div className="min-h-screen bg-[#F7F4EE] flex flex-col">
       {!isAdminRoute && <Navbar />}
       {showScratchCard && <ScratchCardPopup onClose={() => setShowScratchCard(false)} />}
-      <main className={`flex-grow ${!isAdminRoute ? 'pt-[100px] md:pt-[110px]' : ''}`}>
+      <main className={`flex-grow ${!isAdminRoute ? 'pt-[100px] md:pt-[110px] pb-20 md:pb-0' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new-arrival" element={<SpecialCollection type="new-arrival" />} />
