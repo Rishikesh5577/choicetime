@@ -292,7 +292,7 @@ const Home = () => {
         <div className="block lg:hidden w-full">
           <Link to="/sale">
             <img 
-              src="https://res.cloudinary.com/daxdjob49/image/upload/f_auto,q_auto,w_800/v1770460434/b6fd651e-ac90-4574-8f0d-f55e55889f97.png" 
+              src="https://res.cloudinary.com/daxdjob49/image/upload/v1770461279/b9b6c7c0-6754-41c0-82ff-bdb204d2aff3.png" 
               alt="Mobile Banner" 
               className="w-full h-auto object-cover block" 
               loading="eager"
