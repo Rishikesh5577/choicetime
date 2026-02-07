@@ -179,7 +179,7 @@ const Invoice = ({ order, user, onPrint, onDownload }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Size</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Details</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
@@ -213,7 +213,11 @@ const Invoice = ({ order, user, onPrint, onDownload }) => {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-center text-sm text-gray-600">
-                        {item.size || '-'}
+                        <div className="flex flex-col gap-0.5">
+                          {item.size && <span>Size: {item.size}</span>}
+                          {item.boxType && <span>Box: {item.boxType}</span>}
+                          {!item.size && !item.boxType && '-'}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-center text-sm text-gray-600">
                         {item.quantity}

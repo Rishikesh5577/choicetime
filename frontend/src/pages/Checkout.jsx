@@ -22,6 +22,15 @@ const Checkout = () => {
   const [processingStep, setProcessingStep] = useState(0); // Track processing steps
   const [orderData, setOrderData] = useState(null); // Store order data for success page
   const [showInvoicePreview, setShowInvoicePreview] = useState(false); // Show invoice preview
+
+  // Load applied coupon from sessionStorage (set in Cart page)
+  const [appliedCoupon] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('appliedCoupon');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const couponDiscount = appliedCoupon?.discount || 0;
   const [shippingAddress, setShippingAddress] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -176,11 +185,13 @@ const Checkout = () => {
         // Step 4: Creating order (3 seconds delay before API call, then API call)
         setProcessingStep(4);
         await new Promise(resolve => setTimeout(resolve, 3000));
-        const response = await orderAPI.createOrder(shippingAddress, 'COD');
+        const response = await orderAPI.createOrder(shippingAddress, 'COD', appliedCoupon?.code || '');
 
         if (response.success) {
           // Store order data
           setOrderData(response.data?.order);
+          // Clear coupon from session
+          sessionStorage.removeItem('appliedCoupon');
 
           // Step 5: Order confirmed (2 seconds)
           setProcessingStep(5);
@@ -192,7 +203,7 @@ const Checkout = () => {
           // Clear cart after showing modal to prevent redirect
           clearCart();
           // Store order total in localStorage for success page
-          const orderTotal = getCartTotal();
+          const orderTotal = getCartTotal() - couponDiscount;
           localStorage.setItem('lastOrderTotal', orderTotal.toString());
 
           // Navigate to success page after showing the modal with smooth transition
@@ -755,14 +766,28 @@ const Checkout = () => {
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium text-gray-900">₹{getCartTotal().toLocaleString()}</span>
                 </div>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1 text-green-600">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                      </svg>
+                      Coupon ({appliedCoupon?.code})
+                    </span>
+                    <span className="font-medium text-green-600">-₹{couponDiscount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-medium text-green-600">Free</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
                   <span className="text-base font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-semibold text-gray-900">₹{getCartTotal().toLocaleString()}</span>
+                  <span className="text-lg font-semibold text-gray-900">₹{(getCartTotal() - couponDiscount).toLocaleString()}</span>
                 </div>
+                {couponDiscount > 0 && (
+                  <p className="text-xs text-green-600 font-medium">You save ₹{couponDiscount.toLocaleString()}!</p>
+                )}
               </div>
 
               {/* Payment Method Selection */}
@@ -879,6 +904,7 @@ const Checkout = () => {
                     quantity: item.quantity,
                     size: item.size || '',
                     color: item.color || '',
+                    boxType: item.boxType || '',
                     price: (item.product || item).price || (item.product || item).finalPrice || 0,
                   })),
                   totalAmount: getCartTotal(),

@@ -2,12 +2,14 @@ import { useState, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import LoginModal from './LoginModal';
 import { handleImageError } from '../utils/imageFallback';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   
   const [isHovered, setIsHovered] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -102,6 +104,19 @@ const ProductCard = ({ product }) => {
   };
 
 
+  const wishlisted = productId ? isInWishlist(productId) : false;
+
+  const handleWishlistClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) return setShowLoginModal(true);
+    try {
+      await toggleWishlist(productId);
+    } catch (error) {
+      console.error('Wishlist error:', error);
+    }
+  };
+
   // Calculate discount percentage
   const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
 
@@ -130,6 +145,26 @@ const ProductCard = ({ product }) => {
                 {discountPercent}% OFF
               </span>
             )}
+
+            {/* Wishlist Heart */}
+            <button
+              onClick={handleWishlistClick}
+              className={`absolute top-2 right-2 z-20 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 active:scale-95 ${
+                wishlisted
+                  ? 'bg-white ring-2 ring-red-400'
+                  : 'bg-white/90 backdrop-blur-sm hover:bg-white'
+              }`}
+              aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              <svg
+                className={`w-[18px] h-[18px] transition-all duration-200 ${wishlisted ? 'text-red-500 fill-red-500 scale-110' : 'text-gray-500 hover:text-red-400'}`}
+                fill={wishlisted ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
 
             {/* Base Image */}
             {defaultImageSrc && (

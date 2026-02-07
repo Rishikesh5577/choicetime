@@ -18,6 +18,10 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  boxType: {
+    type: String,
+    default: '',
+  },
   price: {
     type: Number,
     required: true,
@@ -66,6 +70,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
+  },
+  coupon: {
+    code: { type: String, default: '' },
+    discount: { type: Number, default: 0 },
   },
   orderDate: {
     type: Date,

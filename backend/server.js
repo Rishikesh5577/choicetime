@@ -12,6 +12,8 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import reelRoutes from './routes/reelRoutes.js';
+import couponRoutes from './routes/couponRoutes.js';
+import scratchCardRoutes from './routes/scratchCardRoutes.js';
 
 dotenv.config();
 
@@ -60,6 +62,14 @@ try {
 app.use('/api/reels', reelRoutes);
 console.log('✅ Reel routes registered at /api/reels');
 
+// Register coupon routes
+app.use('/api/coupons', couponRoutes);
+console.log('✅ Coupon routes registered at /api/coupons');
+
+// Register scratch card routes
+app.use('/api/scratch-card', scratchCardRoutes);
+console.log('✅ Scratch card routes registered at /api/scratch-card');
+
 console.log('✅ Payment routes registered at /api/payment');
 
 // Health check
@@ -99,6 +109,7 @@ app.listen(PORT, () => {
   console.log('   ✓ /api/payment');
   console.log('   ✓ /api/reviews');
   console.log('   ✓ /api/reels');
+  console.log('   ✓ /api/coupons');
   console.log('\n✅ All routes registered successfully!\n');
   console.log('🔍 Test review routes:');
   console.log(`   GET  http://localhost:${PORT}/api/reviews/health`);

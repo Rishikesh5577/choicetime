@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import { categoriesAPI } from '../utils/api';
 
 const Navbar = () => {
   // Context
   const { getCartItemsCount } = useCart();
   const { isAuthenticated, user, logout } = useAuth();
+  const { getWishlistCount } = useWishlist();
 
   // Router
   const location = useLocation();
@@ -236,6 +238,16 @@ const Navbar = () => {
                   )}
                 </div>
 
+                {/* Wishlist */}
+                <Link to="/wishlist" className="hidden md:block p-2 text-gray-800 hover:bg-gray-100 rounded-full transition-colors relative">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  {getWishlistCount() > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">
+                      {getWishlistCount()}
+                    </span>
+                  )}
+                </Link>
+
                 {/* Cart */}
                 <Link to="/cart" className="p-2 text-gray-800 hover:bg-gray-100 rounded-full transition-colors relative">
                   <svg className="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
@@ -341,6 +353,14 @@ const Navbar = () => {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
 
+          <Link to="/wishlist" className="p-3 rounded-xl text-gray-500 relative">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+            {getWishlistCount() > 0 && (
+              <span className="absolute top-1.5 right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                {getWishlistCount()}
+              </span>
+            )}
+          </Link>
 
           <Link to={isAuthenticated ? "/profile" : "/login"} className="p-3 rounded-xl text-gray-500">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -429,6 +449,14 @@ const Navbar = () => {
             <div className="space-y-4">
               <Link to="/" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
               <Link to="/new-arrival" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => setIsMobileMenuOpen(false)}>New Arrivals</Link>
+              <Link to="/wishlist" className="block text-2xl font-light tracking-tight text-gray-900 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
+                Wishlist
+                {getWishlistCount() > 0 && (
+                  <span className="bg-red-500 text-white text-xs w-6 h-6 flex items-center justify-center rounded-full font-bold">
+                    {getWishlistCount()}
+                  </span>
+                )}
+              </Link>
               <Link to="/sale" className="block text-2xl font-bold tracking-tight text-red-600" onClick={() => setIsMobileMenuOpen(false)}>Sale</Link>
             </div>
 

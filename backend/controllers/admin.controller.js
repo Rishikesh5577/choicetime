@@ -178,6 +178,7 @@ export const createProduct = async (req, res) => {
       ...(productData.sizes && { sizes: productData.sizes }),
       ...(productData.thumbnail && { thumbnail: productData.thumbnail }),
       ...(productData.color && { color: productData.color }),
+      ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
       ...(productData.productDetails && { productDetails: productData.productDetails }),
       // Watch specific fields
       ...(productData.model && { model: (productData.model || '').trim() }),
@@ -233,6 +234,7 @@ export const updateProduct = async (req, res) => {
       ...(productData.onSale !== undefined && { onSale: Boolean(productData.onSale) }),
       ...(productData.isFeatured !== undefined && { isFeatured: Boolean(productData.isFeatured) }),
       ...(productData.stock !== undefined && { inStock: stockNum > 0 }),
+      ...(productData.boxOptions !== undefined && { boxOptions: productData.boxOptions }),
       // Watch specific fields
       ...(productData.model !== undefined && { model: (productData.model || '').trim() }),
       ...(productData.functions !== undefined && { functions: (productData.functions || '').trim() }),

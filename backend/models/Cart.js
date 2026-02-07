@@ -19,6 +19,10 @@ const cartItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  boxType: {
+    type: String,
+    default: '',
+  },
 });
 
 const cartSchema = new mongoose.Schema({

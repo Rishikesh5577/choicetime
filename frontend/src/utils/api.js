@@ -120,10 +120,10 @@ export const cartAPI = {
     return apiRequest('/cart');
   },
 
-  addToCart: async (product, quantity = 1, size = '', color = '') => {
+  addToCart: async (product, quantity = 1, size = '', color = '', boxType = '') => {
     return apiRequest('/cart/add', {
       method: 'POST',
-      body: JSON.stringify({ product, quantity, size, color }),
+      body: JSON.stringify({ product, quantity, size, color, boxType }),
     });
   },
 
@@ -157,10 +157,10 @@ export const orderAPI = {
     return apiRequest(`/orders/${orderId}`);
   },
 
-  createOrder: async (shippingAddress, paymentMethod = 'COD') => {
+  createOrder: async (shippingAddress, paymentMethod = 'COD', couponCode = '') => {
     return apiRequest('/orders/create', {
       method: 'POST',
-      body: JSON.stringify({ shippingAddress, paymentMethod }),
+      body: JSON.stringify({ shippingAddress, paymentMethod, couponCode }),
     });
   },
 };
@@ -299,6 +299,23 @@ export const adminAPI = {
   deleteCategory: async (id) =>
     apiRequest(`/admin/categories/${id}`, { method: 'DELETE' }),
   
+  // Coupon management
+  getCoupons: async () => apiRequest('/coupons/admin'),
+  createCoupon: async (payload) =>
+    apiRequest('/coupons/admin', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateCoupon: async (id, payload) =>
+    apiRequest(`/coupons/admin/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteCoupon: async (id) =>
+    apiRequest(`/coupons/admin/${id}`, { method: 'DELETE' }),
+  toggleCoupon: async (id) =>
+    apiRequest(`/coupons/admin/${id}/toggle`, { method: 'PATCH' }),
+
   // Reel management
   getReels: async () => apiRequest('/reels/admin'),
   createReel: async (payload) =>
@@ -363,6 +380,29 @@ export const wishlistAPI = {
 
   checkWishlist: async (productId) => {
     return apiRequest(`/wishlist/check/${productId}`);
+  },
+};
+
+// Scratch Card API
+export const scratchCardAPI = {
+  scratch: async (phone) => {
+    return apiRequest('/scratch-card/scratch', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  },
+};
+
+// Coupon API calls
+export const couponAPI = {
+  validate: async (code, cartTotal) => {
+    return apiRequest('/coupons/validate', {
+      method: 'POST',
+      body: JSON.stringify({ code, cartTotal }),
+    });
+  },
+  getAvailable: async () => {
+    return apiRequest('/coupons/available');
   },
 };
 

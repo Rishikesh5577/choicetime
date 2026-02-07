@@ -40,13 +40,13 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const addToCart = async (product, quantity = 1, size = '', color = '') => {
+  const addToCart = async (product, quantity = 1, size = '', color = '', boxType = '') => {
     if (!isAuthenticated) {
       throw new Error('Please login to add items to cart');
     }
 
     try {
-      const response = await cartAPI.addToCart(product, quantity, size, color);
+      const response = await cartAPI.addToCart(product, quantity, size, color, boxType);
       if (response.success) {
         setCart(response.data.cart.items || []);
       }

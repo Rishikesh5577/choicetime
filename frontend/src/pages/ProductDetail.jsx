@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import LoginModal from '../components/LoginModal';
 import ProductCard from '../components/ProductCard';
 import { handleImageError } from '../utils/imageFallback';
@@ -12,12 +13,14 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+  const [selectedBoxType, setSelectedBoxType] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [recommendedProducts, setRecommendedProducts] = useState([]); // For "You may also like"
   const [trendingProducts, setTrendingProducts] = useState([]); // For "Trending Now"
@@ -52,6 +55,7 @@ const ProductDetail = () => {
     title: '',
     comment: '',
   });
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -143,6 +147,7 @@ const ProductDetail = () => {
         setProduct(foundData.data.product);
         if (foundData.data.product.sizes?.length > 0) setSelectedSize(foundData.data.product.sizes[0]);
         if (foundData.data.product.colors?.length > 0) setSelectedColor(foundData.data.product.colors[0]);
+        if (foundData.data.product.boxOptions?.length > 0) setSelectedBoxType(foundData.data.product.boxOptions[0]);
         // Fetch recommended products after product is loaded
         fetchRecommendedProducts(foundData.data.product);
         fetchTrendingProducts(foundData.data.product);
@@ -546,10 +551,51 @@ const ProductDetail = () => {
     }
   };
 
+  const productId = product?._id || product?.id;
+  const wishlisted = productId ? isInWishlist(productId) : false;
+
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) return setShowLoginModal(true);
+    try {
+      await toggleWishlist(productId);
+    } catch (error) {
+      console.error('Wishlist error:', error);
+    }
+  };
+
+  const handleShareProduct = async () => {
+    const shareData = {
+      title: product.name,
+      text: `Check out ${product.name}${product.brand ? ` by ${product.brand}` : ''} - ₹${product.salePrice || product.price}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch (error) {
+      // User cancelled share or error - try clipboard fallback
+      if (error.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          setShareCopied(true);
+          setTimeout(() => setShareCopied(false), 2000);
+        } catch {
+          console.error('Share failed:', error);
+        }
+      }
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     try {
-      await addToCart(product, 1, selectedSize, selectedColor);
+      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType);
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);
     }
@@ -558,7 +604,7 @@ const ProductDetail = () => {
   const handleBuyNow = async () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     try {
-      await addToCart(product, 1, selectedSize, selectedColor);
+      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType);
       navigate('/checkout');
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);
@@ -671,88 +717,157 @@ const ProductDetail = () => {
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16">
 
             {/* LEFT COLUMN: Product Visualization */}
-            <div className="relative lg:sticky lg:top-8 h-fit order-first lg:order-first">
+            <div className="relative lg:sticky lg:top-[120px] h-fit order-first lg:order-first">
 
-              {/* Main Product Image */}
-              <div className="relative aspect-square bg-gray-100 rounded-xl sm:rounded-2xl overflow-hidden mb-4 sm:mb-6 shadow-lg max-w-md mx-auto lg:max-w-full">
-                {/* Best Seller Badge */}
-                <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-[10px] font-semibold text-gray-900 shadow-sm">
-                  best seller
-                </div>
+              {/* Image Section: Thumbnails left (vertical) + Main Image */}
+              <div className="flex gap-2 sm:gap-3 mb-3">
 
-                {/* Navigation Arrows */}
+                {/* Vertical Thumbnails - tablet & desktop */}
                 {productImages.length > 1 && (
-                  <div className="absolute bottom-3 right-3 z-10 flex gap-1.5">
-                    <button
-                      onClick={handlePrevImage}
-                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
-                      aria-label="Previous image"
-                    >
-                      <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handleNextImage}
-                      className="w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
-                      aria-label="Next image"
-                    >
-                      <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                  <div className="hidden sm:flex flex-col gap-1.5 w-14 md:w-16 flex-shrink-0">
+                    {productImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImageIndex(idx)}
+                        className={`relative aspect-square rounded-md overflow-hidden border-2 transition-all ${
+                          selectedImageIndex === idx
+                            ? 'border-gray-900 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-400 opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={img}
+                          alt={`${product.name} ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => handleImageError(e, 100, 100)}
+                        />
+                      </button>
+                    ))}
                   </div>
                 )}
 
-                <img
-                  src={productImages[selectedImageIndex]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => handleImageError(e, 800, 800)}
-                />
+                {/* Main Product Image */}
+                <div className="relative flex-1 aspect-square bg-gray-100 rounded-lg sm:rounded-xl overflow-hidden shadow-md max-w-xs sm:max-w-none mx-auto">
 
-                {/* Interactive Labels */}
-                {product.color && (
-                  <div className="absolute top-1/4 right-4 sm:right-8">
-                    <div className="relative">
-                      <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-gray-500 rounded-full z-10"></div>
-                      <div className="bg-gray-800/90 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap">
-                        {product.color}
-                      </div>
-                    </div>
+                  {/* Top-right: Wishlist + Share */}
+                  <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+                    <button
+                      onClick={handleToggleWishlist}
+                      className={`group w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 active:scale-95 ${
+                        wishlisted
+                          ? 'bg-white ring-2 ring-red-400'
+                          : 'bg-white/95 backdrop-blur-md hover:bg-white'
+                      }`}
+                      aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      <svg
+                        className={`w-5 h-5 sm:w-[22px] sm:h-[22px] transition-all duration-200 ${wishlisted ? 'text-red-500 fill-red-500 scale-110' : 'text-gray-500 group-hover:text-red-400'}`}
+                        fill={wishlisted ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleShareProduct}
+                      className="group relative w-10 h-10 sm:w-11 sm:h-11 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 active:scale-95"
+                      aria-label="Share product"
+                    >
+                      {shareCopied && (
+                        <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                          Link copied!
+                        </span>
+                      )}
+                      <svg className="w-5 h-5 sm:w-[22px] sm:h-[22px] text-gray-500 group-hover:text-gray-800 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
                   </div>
-                )}
-                {product.brand && (
-                  <div className="absolute bottom-1/3 left-4 sm:left-8">
-                    <div className="relative">
-                      <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-gray-500 rounded-full z-10"></div>
-                      <div className="bg-gray-800/90 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap">
-                        {product.brand}
-                      </div>
+
+                  {/* Navigation Arrows */}
+                  {productImages.length > 1 && (
+                    <div className="absolute bottom-2 right-2 z-10 flex gap-1">
+                      <button
+                        onClick={handlePrevImage}
+                        className="w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
+                        aria-label="Previous image"
+                      >
+                        <svg className="w-3.5 h-3.5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={handleNextImage}
+                        className="w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
+                        aria-label="Next image"
+                      >
+                        <svg className="w-3.5 h-3.5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* Image counter */}
+                  {productImages.length > 1 && (
+                    <div className="absolute top-2 left-2 z-10 bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                      {selectedImageIndex + 1}/{productImages.length}
+                    </div>
+                  )}
+
+                  <img
+                    src={productImages[selectedImageIndex]}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => handleImageError(e, 600, 600)}
+                  />
+                </div>
               </div>
+
+              {/* Horizontal Thumbnails - mobile only */}
+              {productImages.length > 1 && (
+                <div className="flex sm:hidden gap-1.5 mb-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {productImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImageIndex(idx)}
+                      className={`relative w-11 h-11 flex-shrink-0 rounded overflow-hidden border-2 transition-all ${
+                        selectedImageIndex === idx
+                          ? 'border-gray-900'
+                          : 'border-gray-200 opacity-50 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`${product.name} ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => handleImageError(e, 80, 80)}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Size Selection */}
               {product.sizes && product.sizes.length > 0 && (
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-900 mb-2">Select Size</label>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-900 mb-1.5">Select Size</label>
+                  <div className="flex flex-wrap gap-1.5">
                     {product.sizes.map((size) => {
                       const isSelected = selectedSize === size;
                       return (
                         <button
                           key={size}
                           onClick={() => setSelectedSize(size)}
-                          className={`px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-1.5 ${isSelected
-                            ? 'border-gray-900 bg-gray-50'
+                          className={`px-2.5 py-1.5 rounded-md border transition-all flex items-center gap-1 text-xs ${isSelected
+                            ? 'border-gray-900 bg-gray-50 font-semibold'
                             : 'border-gray-200 hover:border-gray-300'
                             }`}
                         >
-                          <span className="text-xs font-medium text-gray-900">{size}</span>
+                          <span className="font-medium text-gray-900">{size}</span>
                           {isSelected && (
-                            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -766,22 +881,21 @@ const ProductDetail = () => {
               {/* Color Swatches */}
               {(product.colors?.length > 0 || product.color) && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-900 mb-2">Select Color</label>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <label className="block text-xs font-medium text-gray-900 mb-1.5">Select Color</label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {(product.colors || [product.color || '#000000']).slice(0, 6).map((color, idx) => {
                       const isSelected = selectedColor === color || (!selectedColor && idx === 0);
                       return (
                         <button
                           key={idx}
                           onClick={() => setSelectedColor(color)}
-                          className={`relative w-10 h-10 rounded-full border-2 transition-all ${isSelected ? 'border-gray-900 scale-110 shadow-md' : 'border-gray-300 hover:border-gray-500'
-                            }`}
+                          className={`relative w-8 h-8 rounded-full border-2 transition-all ${isSelected ? 'border-gray-900 scale-110 shadow-md' : 'border-gray-300 hover:border-gray-500'}`}
                           style={{ backgroundColor: color }}
                           aria-label={`Select color ${color}`}
                         >
                           {isSelected && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <svg className="w-5 h-5 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                              <svg className="w-4 h-4 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             </div>
@@ -792,23 +906,24 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
             </div>
 
             {/* RIGHT COLUMN: Product Information */}
-            <div className="flex flex-col space-y-6 lg:space-y-8 order-last lg:order-last">
+            <div className="flex flex-col space-y-3 sm:space-y-4 lg:space-y-5 order-last lg:order-last">
 
               {/* Product Title & Brand */}
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {product.brand && (
-                  <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {product.brand}
                   </div>
                 )}
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 leading-snug">
                   {nameWords.map((word, idx) => {
                     const shouldHighlight = highlightWords.some(hw => word.toLowerCase().includes(hw.toLowerCase()));
                     return (
-                      <span key={idx} className="inline-block mr-2">
+                      <span key={idx} className="inline-block mr-1.5">
                         {shouldHighlight ? (
                           <span className="relative inline-block">
                             <span className="relative z-10">{word}</span>
@@ -824,69 +939,115 @@ const ProductDetail = () => {
               </div>
 
               {/* Price Section */}
-              <div className="flex items-baseline gap-3 pb-4 border-b border-gray-200">
-                <span className="text-3xl lg:text-4xl font-bold text-gray-900">₹{finalPrice.toLocaleString()}</span>
+              <div className="flex items-baseline gap-2 pb-3 border-b border-gray-200">
+                <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">₹{finalPrice.toLocaleString()}</span>
                 {originalPrice > finalPrice && (
                   <>
-                    <span className="text-lg text-gray-400 line-through">₹{originalPrice.toLocaleString()}</span>
-                    <span className="text-sm font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">
+                    <span className="text-sm sm:text-base text-gray-400 line-through">₹{originalPrice.toLocaleString()}</span>
+                    <span className="text-[11px] sm:text-xs font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
                       {Math.round(((originalPrice - finalPrice) / originalPrice) * 100)}% OFF
                     </span>
                   </>
                 )}
               </div>
 
+              {/* Box Type Selection */}
+              {product.boxOptions && product.boxOptions.length > 0 && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5">Select Box Type</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.boxOptions.map((boxOpt) => {
+                      const isSelected = selectedBoxType === boxOpt;
+                      return (
+                        <button
+                          key={boxOpt}
+                          onClick={() => setSelectedBoxType(boxOpt)}
+                          className={`px-3 py-1.5 rounded-md border transition-all flex items-center gap-1.5 text-xs sm:text-sm ${isSelected
+                            ? 'border-gray-900 bg-gray-900 text-white'
+                            : 'border-gray-200 hover:border-gray-400 text-gray-700'
+                            }`}
+                        >
+                          <svg className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          <span className="font-medium">{boxOpt}</span>
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex flex-row gap-3">
+              <div className="flex flex-row gap-2">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-semibold px-6 py-3.5 rounded-lg transition-all shadow-lg hover:shadow-xl active:scale-[0.98] text-base"
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-xs sm:text-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span>Add to Cart</span>
                 </button>
                 <button
                   onClick={handleBuyNow}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-6 py-3.5 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-base border-2 border-gray-900"
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-xs sm:text-sm border border-gray-900"
                 >
                   <span>Buy Now</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleShareProduct}
+                  className="group relative flex items-center justify-center w-10 sm:w-11 rounded-lg border bg-white border-gray-200 hover:border-gray-800 hover:bg-gray-50 transition-all duration-200 active:scale-[0.92]"
+                  aria-label="Share product"
+                >
+                  {shareCopied && (
+                    <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                      Link copied!
+                    </span>
+                  )}
+                  <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-800 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
                 </button>
               </div>
 
               {/* Quick Info Cards */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-xs font-semibold text-gray-700 uppercase">Free Shipping</span>
+                    <span className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase">Free Shipping</span>
                   </div>
-                  <p className="text-xs text-gray-600">On orders over ₹1,000</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">On orders over ₹1,000</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span className="text-xs font-semibold text-gray-700 uppercase">Easy Returns</span>
+                    <span className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase">Easy Returns</span>
                   </div>
-                  <p className="text-xs text-gray-600">30 days return policy</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500">30 days return policy</p>
                 </div>
               </div>
 
               {/* Reviews Summary */}
               {reviewStats && reviewStats.averageRating > 0 && (
-                <div className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="flex items-center gap-4 mb-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-center gap-3 mb-3">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-gray-900">{reviewStats.averageRating.toFixed(1)}</div>
-                      <div className="flex items-center gap-0.5 mt-1">
+                      <div className="text-2xl font-bold text-gray-900">{reviewStats.averageRating.toFixed(1)}</div>
+                      <div className="flex items-center gap-0.5 mt-0.5">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <svg
                             key={star}
@@ -1098,8 +1259,8 @@ const ProductDetail = () => {
               <p className="text-xs sm:text-sm text-gray-600">Popular picks across all categories</p>
             </div>
 
-            {/* You may also like - Related products */}
-            {(recommendedProducts.length > 0 || loadingRecommendations) && (
+            {/* You may also like - Related products (exclude same-brand products shown in "More from Brand" section) */}
+            {(loadingRecommendations || recommendedProducts.filter(p => !product?.brand || p.brand !== product.brand).length > 0) && (
               <div className="mb-8 sm:mb-12">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">You may also like</h3>
                 {loadingRecommendations ? (
@@ -1147,7 +1308,9 @@ const ProductDetail = () => {
                       }}
                     >
                       <div className="flex gap-4 min-w-max">
-                        {recommendedProducts.map((recommendedProduct) => (
+                        {recommendedProducts
+                          .filter(p => !product?.brand || p.brand !== product.brand)
+                          .map((recommendedProduct) => (
                           <div key={recommendedProduct.id} className="flex-shrink-0 w-56 sm:w-64">
                             <ProductCard product={recommendedProduct} />
                           </div>
@@ -1159,8 +1322,8 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* On Sale Section */}
-            {(saleProducts.length > 0 || loadingSale) && (
+            {/* On Sale Section (exclude products already in recommended) */}
+            {(loadingSale || saleProducts.filter(p => !recommendedProducts.some(r => r.id === p.id)).length > 0) && (
               <div className="mb-8 sm:mb-12">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">On Sale</h3>
                 {loadingSale ? (
@@ -1208,7 +1371,9 @@ const ProductDetail = () => {
                       }}
                     >
                       <div className="flex gap-4 min-w-max">
-                        {saleProducts.map((saleProduct) => (
+                        {saleProducts
+                          .filter(p => !recommendedProducts.some(r => r.id === p.id))
+                          .map((saleProduct) => (
                           <div key={saleProduct.id} className="flex-shrink-0 w-56 sm:w-64">
                             <ProductCard product={saleProduct} />
                           </div>
@@ -1221,7 +1386,7 @@ const ProductDetail = () => {
             )}
 
             {/* More from [Brand] Section */}
-            {product?.brand && (recommendedProducts.length > 0 || loadingRecommendations) && (
+            {product?.brand && (loadingRecommendations || recommendedProducts.filter(p => p.brand === product.brand).length > 0) && (
               <div className="mb-8 sm:mb-12">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">More from {product.brand}</h3>
                 {loadingRecommendations ? (
@@ -1284,8 +1449,8 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Trending Now - Random Mix from ALL Categories */}
-            {(trendingProducts.length > 0 || loadingTrending) && (
+            {/* Trending Now - Random Mix from ALL Categories (exclude products already in recommended/sale) */}
+            {(loadingTrending || trendingProducts.filter(p => !recommendedProducts.some(r => r.id === p.id) && !saleProducts.some(s => s.id === p.id)).length > 0) && (
               <div>
                 {loadingTrending ? (
                   <div className="flex gap-4 overflow-x-auto pb-4">
@@ -1332,7 +1497,9 @@ const ProductDetail = () => {
                       }}
                     >
                       <div className="flex gap-4 min-w-max">
-                        {trendingProducts.map((trendingProduct) => (
+                        {trendingProducts
+                          .filter(p => !recommendedProducts.some(r => r.id === p.id) && !saleProducts.some(s => s.id === p.id))
+                          .map((trendingProduct) => (
                           <div key={trendingProduct.id} className="flex-shrink-0 w-56 sm:w-64">
                             <ProductCard product={trendingProduct} />
                           </div>
