@@ -24,7 +24,7 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
     if (product) {
       setMainImage(product.images?.[0] || product.image || '');
       setSelectedSize(isWatch ? '' : (product.sizes?.[0] || ''));
-      setSelectedColor(product.colors?.[0] || '');
+      setSelectedColor(product.colorOptions?.[0] || product.colors?.[0] || '');
       setSelectedBoxType(product.boxOptions?.[0] || '');
     }
   }, [product, isWatch]);
@@ -133,21 +133,39 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                 )}
 
                 {/* Colors */}
-                {product.colors && product.colors.length > 0 && (
+                {(product.colorOptions?.length > 0 || product.colors?.length > 0) && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-                    <div className="flex gap-2">
-                      {product.colors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={`w-10 h-10 rounded-full border-2 ${
-                            selectedColor === color ? 'border-gray-900' : 'border-gray-300'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
+                    <div className="flex gap-2 flex-wrap">
+                      {(product.colorOptions || product.colors).map((color) => {
+                        const isHex = /^#([0-9A-F]{3}){1,2}$/i.test(color) || /^(rgb|hsl)/i.test(color);
+                        if (isHex) {
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => setSelectedColor(color)}
+                              className={`w-10 h-10 rounded-full border-2 ${
+                                selectedColor === color ? 'border-gray-900' : 'border-gray-300'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          );
+                        }
+                        return (
+                          <button
+                            key={color}
+                            onClick={() => setSelectedColor(color)}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                              selectedColor === color
+                                ? 'border-gray-900 bg-gray-900 text-white'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+                            }`}
+                          >
+                            {color}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

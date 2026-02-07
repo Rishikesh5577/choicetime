@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
@@ -8,16 +8,12 @@ const typeConfig = {
   'new-arrival': {
     title: 'New Arrivals',
     description: 'Fresh drops across men, women, watches, lenses, and accessories.',
-    highlightClass: 'text-blue-600',
-    ctaColor: 'text-blue-600 hover:text-blue-800',
     query: { isNewArrival: true, sort: 'createdAt', order: 'desc' },
     emptyMessage: 'No new arrivals right now. Check back soon!',
   },
   sale: {
     title: 'Mega Sale',
     description: 'Handpicked deals with the highest discounts across every category.',
-    highlightClass: 'text-red-600',
-    ctaColor: 'text-red-600 hover:text-red-700',
     query: { onSale: true, sort: 'discountPercent', order: 'desc' },
     emptyMessage: 'No active sale items at the moment.',
   },
@@ -25,9 +21,12 @@ const typeConfig = {
 
 const SpecialCollection = ({ type }) => {
   const config = useMemo(() => typeConfig[type] || typeConfig['new-arrival'], [type]);
+
   const [allProducts, setAllProducts] = useState([]);
+  const [filteredList, setFilteredList] = useState([]);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     priceRange: null,
     brands: [],
@@ -36,45 +35,140 @@ const SpecialCollection = ({ type }) => {
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+  // Fetch products from both unified collection and old category collections
   useEffect(() => {
-    const queryParams = {
-      limit: 1000, // Fetch all products to ensure nothing is missed
-      ...(config.query || {}),
-    };
-
-    const fetchSpecialProducts = async () => {
+    const fetchProducts = async () => {
       setIsLoading(true);
       try {
-        const response = await productAPI.getAllProducts(queryParams);
-        if (response.success) {
-          const normalized = (response.data.products || []).map((product) => ({
-            ...product,
-            id: product._id || product.id,
-          }));
-          setAllProducts(normalized);
-          setProducts(normalized);
-        } else {
-          setAllProducts([]);
-          setProducts([]);
-        }
+        // Fetch from both sources in parallel
+        const [unifiedRes, legacyRes] = await Promise.all([
+          // Unified products collection (admin-created products)
+          productAPI.getProducts(null, { limit: 1000, ...(config.query || {}) }),
+          // Old category-specific collections
+          productAPI.getAllProducts({ limit: 1000, ...(config.query || {}) }),
+        ]);
+
+        const unifiedProducts = unifiedRes.success ? (unifiedRes.data.products || []) : [];
+        const legacyProducts = legacyRes.success ? (legacyRes.data.products || []) : [];
+
+        // Merge and deduplicate by _id
+        const seen = new Set();
+        const merged = [];
+        [...unifiedProducts, ...legacyProducts].forEach((product) => {
+          const pid = product._id || product.id;
+          if (pid && !seen.has(pid)) {
+            seen.add(pid);
+            merged.push({ ...product, id: pid });
+          }
+        });
+
+        setAllProducts(merged);
       } catch (error) {
         console.error('Error fetching special products:', error);
         setAllProducts([]);
-        setProducts([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSpecialProducts();
+    fetchProducts();
+    setFilters({ priceRange: null, brands: [], sizes: [], sortBy: null });
   }, [config, type]);
+
+  // Filter logic
+  useEffect(() => {
+    let filtered = [...allProducts];
+
+    if (filters.priceRange) {
+      filtered = filtered.filter((product) => {
+        const price = product.finalPrice || product.price;
+        const { min, max } = filters.priceRange;
+        return price >= min && (max === Infinity || price <= max);
+      });
+    }
+
+    if (filters.brands && filters.brands.length > 0) {
+      filtered = filtered.filter((product) => filters.brands.includes(product.brand));
+    }
+
+    if (filters.sizes && filters.sizes.length > 0) {
+      filtered = filtered.filter((product) => {
+        if (!product.sizes || !Array.isArray(product.sizes)) return false;
+        return filters.sizes.some((size) => product.sizes.includes(size));
+      });
+    }
+
+    filtered.sort((a, b) => {
+      const priceA = a.finalPrice || a.price || 0;
+      const priceB = b.finalPrice || b.price || 0;
+
+      if (!filters.sortBy || filters.sortBy === 'default') {
+        return priceA - priceB;
+      }
+
+      switch (filters.sortBy) {
+        case 'price-low-high':
+          return priceA - priceB;
+        case 'price-high-low':
+          return priceB - priceA;
+        case 'newest':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        default:
+          return priceA - priceB;
+      }
+    });
+
+    setFilteredList(filtered);
+    setPage(1);
+  }, [allProducts, filters]);
+
+  // Pagination
+  const itemsPerPage = 24;
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+
+  useEffect(() => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setProducts(filteredList.slice(startIndex, endIndex));
+  }, [filteredList, page, itemsPerPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      const productArea = document.getElementById('product-scroll-area');
+      if (productArea) productArea.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page <= 3) {
+        for (let i = 2; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push('...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push('...');
+        for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
 
   const brands = useMemo(() => {
     const brandSet = new Set();
     allProducts.forEach((product) => {
-      if (product.brand) {
-        brandSet.add(product.brand);
-      }
+      if (product.brand) brandSet.add(product.brand);
     });
     return Array.from(brandSet).sort();
   }, [allProducts]);
@@ -89,67 +183,25 @@ const SpecialCollection = ({ type }) => {
     return Array.from(sizeSet).sort();
   }, [allProducts]);
 
-  useEffect(() => {
-    let filtered = [...allProducts];
-
-    if (filters.priceRange) {
-      filtered = filtered.filter((product) => {
-        const price = product.finalPrice || product.price;
-        const { min, max } = filters.priceRange;
-        return price >= min && (max === Infinity || price <= max);
-      });
-    }
-
-    if (filters.brands.length > 0) {
-      filtered = filtered.filter((product) => filters.brands.includes(product.brand));
-    }
-
-    if (filters.sizes.length > 0) {
-      filtered = filtered.filter((product) => {
-        if (!product.sizes || !Array.isArray(product.sizes)) return false;
-        return filters.sizes.some((size) => product.sizes.includes(size));
-      });
-    }
-
-    if (filters.sortBy && filters.sortBy !== 'default') {
-      filtered.sort((a, b) => {
-        const priceA = a.finalPrice || a.price;
-        const priceB = b.finalPrice || b.price;
-
-        switch (filters.sortBy) {
-          case 'price-low-high':
-            return priceA - priceB;
-          case 'price-high-low':
-            return priceB - priceA;
-          case 'newest':
-            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-          default:
-            return 0;
-        }
-      });
-    }
-
-    setProducts(filtered);
-  }, [allProducts, filters]);
-
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      priceRange: null,
-      brands: [],
-      sizes: [],
-      sortBy: null,
-    });
+    setFilters({ priceRange: null, brands: [], sizes: [], sortBy: null });
   };
 
   const normalizeProduct = (product) => {
     let images = product.images;
     if (images && !Array.isArray(images) && typeof images === 'object') {
-      const keys = Object.keys(images).filter((k) => images[k] && typeof images[k] === 'string' && images[k].trim() !== '');
-      keys.sort((a, b) => (parseInt(String(a).replace(/\D/g, ''), 10) || 0) - (parseInt(String(b).replace(/\D/g, ''), 10) || 0));
+      const keys = Object.keys(images).filter(
+        (k) => images[k] && typeof images[k] === 'string' && images[k].trim() !== ''
+      );
+      keys.sort(
+        (a, b) =>
+          (parseInt(String(a).replace(/\D/g, ''), 10) || 0) -
+          (parseInt(String(b).replace(/\D/g, ''), 10) || 0)
+      );
       images = keys.map((k) => images[k].trim());
     }
     if (!Array.isArray(images)) images = [];
@@ -166,107 +218,194 @@ const SpecialCollection = ({ type }) => {
       originalPrice: product.originalPrice || product.mrp || product.price,
       rating: product.rating || 0,
       reviews: product.reviewsCount || product.reviews || 0,
+      category: product.category,
     };
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Simple Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              {config.title}
-            </h1>
-            <p className="text-gray-600 text-base">
-              {config.description}
-            </p>
-          </div>
+    <div className="min-h-[calc(100vh-110px)] md:h-[calc(100vh-110px)] bg-[#F7F4EE] flex flex-col md:flex-row">
+      {/* Left Sidebar - Fixed/Sticky */}
+      <div className="hidden lg:block w-72 flex-shrink-0 border-r border-[#E8E4DD] bg-[#F7F4EE] overflow-y-auto">
+        <div className="p-4">
+          <FilterSidebar
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            onCloseMobile={() => setShowMobileFilters(false)}
+            brands={brands}
+            sizes={sizes}
+          />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-600 text-sm">
-            Showing <span className="font-semibold text-gray-900">{products.length}</span> of{' '}
-            <span className="font-semibold text-gray-900">{allProducts.length}</span> items
-          </p>
-          <button
-            onClick={() => setShowMobileFilters(true)}
-            className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M4 8h16M5 12h14M6 16h12M7 20h10" />
-            </svg>
-            Filters
-          </button>
-        </div>
-
-        <div className="flex gap-6 relative">
+      {/* Mobile Filter Overlay */}
+      {showMobileFilters && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileFilters(false)}>
           <div
-            className={`${showMobileFilters ? 'block' : 'hidden'
-              } lg:block w-full lg:w-64 flex-shrink-0 ${showMobileFilters
-                ? 'fixed inset-0 z-50 bg-white p-4 overflow-y-auto lg:relative lg:z-auto lg:bg-transparent lg:p-0'
-                : ''
-              }`}
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl overflow-y-auto animate-slide-in"
+            onClick={(e) => e.stopPropagation()}
           >
-            {showMobileFilters && (
-              <div className="lg:hidden flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Filters</h2>
-                <button
-                  onClick={() => setShowMobileFilters(false)}
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={(newFilters) => {
-                handleFilterChange(newFilters);
-                if (window.innerWidth >= 1024) {
-                  setShowMobileFilters(false);
-                }
-              }}
-              onClearFilters={() => {
-                handleClearFilters();
-                if (window.innerWidth >= 1024) {
-                  setShowMobileFilters(false);
-                }
-              }}
-              onCloseMobile={() => setShowMobileFilters(false)}
-              brands={brands}
-              sizes={sizes}
-            />
+            {/* Mobile Header */}
+            <div className="sticky top-0 flex items-center justify-between p-4 bg-white border-b border-gray-100 z-10">
+              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+              <button
+                onClick={() => setShowMobileFilters(false)}
+                className="p-2 -mr-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Filter Content */}
+            <div className="p-4">
+              <FilterSidebar
+                filters={filters}
+                onFilterChange={(newFilters) => {
+                  handleFilterChange(newFilters);
+                }}
+                onClearFilters={() => {
+                  handleClearFilters();
+                }}
+                brands={brands}
+                sizes={sizes}
+                isMobile={true}
+              />
+            </div>
+            {/* Apply Button */}
+            <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+              <button
+                onClick={() => setShowMobileFilters(false)}
+                className="w-full py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Right Content - Scrollable */}
+      <div id="product-scroll-area" className="flex-1 md:overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {config.title}
+              </h1>
+              {!isLoading && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {filteredList.length > 0
+                    ? `Showing ${(page - 1) * itemsPerPage + 1} - ${Math.min(page * itemsPerPage, filteredList.length)} of ${filteredList.length} products`
+                    : config.description}
+                </p>
+              )}
+            </div>
+
+            {/* Filter Toggle - Mobile Only */}
+            <button
+              onClick={() => setShowMobileFilters(true)}
+              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filters
+            </button>
           </div>
 
-          <div className="flex-1 w-full lg:w-auto">
-            {isLoading ? (
-              <div className="min-h-[40vh] flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Collecting the best picks for you...</p>
-                </div>
-              </div>
-            ) : products.length === 0 ? (
-              <div className="min-h-[30vh] flex flex-col items-center justify-center text-center">
-                <p className="text-gray-600 text-lg mb-4">{config.emptyMessage}</p>
-                <Link to="/" className={`${config.ctaColor} font-medium`}>
-                  Explore all products →
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {/* Products Grid */}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading products...</p>
+            </div>
+          ) : products.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((product) => (
                   <ProductCard key={product._id || product.id} product={normalizeProduct(product)} />
                 ))}
               </div>
-            )}
-          </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
+                    <button
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page === 1}
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Previous
+                      </span>
+                    </button>
+
+                    {getPageNumbers().map((pageNum, index) => {
+                      if (pageNum === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`min-w-[40px] px-3 py-2 text-sm font-semibold rounded-lg border-2 transition-all ${
+                            page === pageNum
+                              ? 'bg-gray-900 text-white border-gray-900 shadow-lg'
+                              : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <span className="flex items-center gap-1">
+                        Next
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-500">
+                    Page {page} of {totalPages}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg mb-4">{config.emptyMessage}</p>
+              {filters.priceRange || filters.brands?.length > 0 || filters.sizes?.length > 0 ? (
+                <button
+                  onClick={handleClearFilters}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear filters to see all products
+                </button>
+              ) : (
+                <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">
+                  ← Back to Home
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -274,5 +413,3 @@ const SpecialCollection = ({ type }) => {
 };
 
 export default SpecialCollection;
-
-

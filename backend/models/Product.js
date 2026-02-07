@@ -30,6 +30,7 @@ const productSchema = new mongoose.Schema(
     inStock: { type: Boolean, default: true },
 
     color: String,
+    colorOptions: [{ type: String }],
     boxOptions: [{ type: String }],
     productDetails: { type: mongoose.Schema.Types.Mixed, default: {} },
 

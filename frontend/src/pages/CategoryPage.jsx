@@ -288,7 +288,7 @@ const CategoryPage = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-110px)] bg-[#F7F4EE] flex">
+    <div className="min-h-[calc(100vh-110px)] md:h-[calc(100vh-110px)] bg-[#F7F4EE] flex flex-col md:flex-row">
       {/* Left Sidebar - Fixed/Sticky */}
       <div className="hidden lg:block w-72 flex-shrink-0 border-r border-[#E8E4DD] bg-[#F7F4EE] overflow-y-auto">
         <div className="p-4">
@@ -351,7 +351,7 @@ const CategoryPage = () => {
       )}
 
       {/* Right Content - Scrollable */}
-      <div id="product-scroll-area" className="flex-1 overflow-y-auto">
+      <div id="product-scroll-area" className="flex-1 md:overflow-y-auto">
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Header with Title, Count, Filter Toggle */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">

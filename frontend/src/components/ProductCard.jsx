@@ -125,7 +125,7 @@ const ProductCard = ({ product }) => {
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       
       <div 
-        className="group relative w-full select-none transform-gpu bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300" 
+        className="group relative w-full h-full select-none transform-gpu bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col" 
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => {
           setIsHovered(false);
@@ -134,15 +134,15 @@ const ProductCard = ({ product }) => {
           }
         }}
       >
-        <Link to={`/product/${productId}`} className="block">
+        <Link to={`/product/${productId}`} className="flex flex-col flex-1">
           
           {/* IMAGE AREA */}
           <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
             
-            {/* Discount Badge */}
-            {hasDiscount && (
-              <span className="absolute top-2 left-2 z-20 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded">
-                {discountPercent}% OFF
+            {/* Sale Badge */}
+            {product.onSale && (
+              <span className="absolute top-2 left-2 z-20 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded tracking-wide">
+                SALE
               </span>
             )}
 
@@ -208,19 +208,19 @@ const ProductCard = ({ product }) => {
           </div>
 
           {/* PRODUCT INFO */}
-          <div className="p-3">
+          <div className="p-3 flex flex-col flex-1">
             {/* Brand / Category */}
             <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-1">
               {product.brand || product.category || 'Brand'}
             </p>
             
-            {/* Product Name */}
-            <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-2">
+            {/* Product Name - takes remaining space */}
+            <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 mb-2 flex-1">
               {product.name || product.title || 'Product Name'}
             </h3>
             
-            {/* Price Section */}
-            <div className="flex items-center gap-2 mb-2">
+            {/* Price Section - pushed to bottom */}
+            <div className="flex items-center gap-2 flex-wrap mt-auto">
               <span className="text-lg font-bold text-gray-900">
                 ₹{finalPrice > 0 ? finalPrice.toLocaleString() : '0'}
               </span>
@@ -229,11 +229,16 @@ const ProductCard = ({ product }) => {
                   ₹{originalPrice.toLocaleString()}
                 </span>
               )}
+              {hasDiscount && (
+                <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                  {discountPercent}% OFF
+                </span>
+              )}
             </div>
             
             {/* Rating - only show if rating exists and is greater than 0 */}
             {product.rating > 0 && (
-              <div className="flex items-center gap-1 mb-3">
+              <div className="flex items-center gap-1 mt-1.5">
                 <div className="flex items-center gap-0.5 bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                   <span>{product.rating}</span>
                   <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
@@ -248,8 +253,8 @@ const ProductCard = ({ product }) => {
           </div>
         </Link>
         
-        {/* Add to Cart Button - Always visible below product info */}
-        <div className="px-3 pb-3">
+        {/* Add to Cart Button - Always at the bottom */}
+        <div className="px-3 pb-3 mt-auto">
           {!showSizes ? (
             <button
               onClick={handleAddClick}

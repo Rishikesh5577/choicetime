@@ -137,6 +137,7 @@ const AdminDashboard = () => {
     itemWeight: '',
     quality: '',
     warranty: '',
+    colorOptions: '',
     boxOptions: '',
   });
   const [loading, setLoading] = useState(false);
@@ -798,6 +799,7 @@ const AdminDashboard = () => {
       isNewArrival: product.isNewArrival || false,
       onSale: product.onSale || false,
       isFeatured: product.isFeatured || false,
+      colorOptions: product.colorOptions?.join(', ') || '',
       boxOptions: product.boxOptions?.join(', ') || '',
       // Watch specific fields
       model: product.model || '',
@@ -837,6 +839,9 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
+        colorOptions: productForm.colorOptions
+          ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
+          : [],
         boxOptions: productForm.boxOptions
           ? productForm.boxOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
@@ -885,6 +890,9 @@ const AdminDashboard = () => {
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
         isFeatured: Boolean(productForm.isFeatured),
+        colorOptions: productForm.colorOptions
+          ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
+          : [],
         boxOptions: productForm.boxOptions
           ? productForm.boxOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
@@ -1189,6 +1197,7 @@ const AdminDashboard = () => {
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Sale</th>
                           <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -1239,6 +1248,23 @@ const AdminDashboard = () => {
                                 }`}>
                                   {product.stock}
                                 </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-center">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await adminAPI.updateProduct(product._id, { onSale: !product.onSale });
+                                        setProducts(prev => prev.map(p => p._id === product._id ? { ...p, onSale: !p.onSale } : p));
+                                      } catch (err) {
+                                        console.error('Toggle sale error:', err);
+                                      }
+                                    }}
+                                    className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${product.onSale ? 'bg-red-500' : 'bg-gray-300'}`}
+                                  >
+                                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${product.onSale ? 'translate-x-5' : 'translate-x-0'}`}></span>
+                                  </button>
+                                </div>
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center justify-center gap-2">
@@ -1474,25 +1500,39 @@ const AdminDashboard = () => {
                 />
               </div>
 
-              {/* Box Options Section */}
+              {/* Color & Box Options Section */}
               <div className="border-t pt-4 mt-4">
                 <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                   </svg>
-                  Box / Packaging Options (Optional)
+                  Color / Variant Options (Optional)
                 </h4>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
-                  <input
-                    name="boxOptions"
-                    type="text"
-                    value={productForm.boxOptions}
-                    onChange={handleProductFormChange}
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="e.g. Regular Box, Brand Box"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Color Options (comma separated)</label>
+                    <input
+                      name="colorOptions"
+                      type="text"
+                      value={productForm.colorOptions}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Red, Blue, Black, Gold"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Enter color names separated by commas. Users will choose one when ordering.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
+                    <input
+                      name="boxOptions"
+                      type="text"
+                      value={productForm.boxOptions}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Regular Box, Brand Box"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
+                  </div>
                 </div>
               </div>
 
@@ -1868,25 +1908,39 @@ const AdminDashboard = () => {
                   />
                 </div>
 
-                {/* Box Options Section */}
+                {/* Color & Box Options Section */}
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                     </svg>
-                    Box / Packaging Options (Optional)
+                    Color / Variant Options (Optional)
                   </h4>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
-                    <input
-                      name="boxOptions"
-                      type="text"
-                      value={productForm.boxOptions}
-                      onChange={handleProductFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. Regular Box, Brand Box"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Color Options (comma separated)</label>
+                      <input
+                        name="colorOptions"
+                        type="text"
+                        value={productForm.colorOptions}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Red, Blue, Black, Gold"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Enter color names separated by commas. Users will choose one when ordering.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
+                      <input
+                        name="boxOptions"
+                        type="text"
+                        value={productForm.boxOptions}
+                        onChange={handleProductFormChange}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Regular Box, Brand Box"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
+                    </div>
                   </div>
                 </div>
 
