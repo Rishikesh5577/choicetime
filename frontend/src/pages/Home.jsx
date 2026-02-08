@@ -230,7 +230,7 @@ const Home = () => {
   }, []);
 
   const carouselSlides = [
-    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/f_auto,q_auto,w_1920/v1770261032/image_ua7yjh.jpg', link: '/' }
+    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770548587/Brown_Dark_Turquoise_Elegant_Classic_Watch_Product_Facebook_Ad_1600_x_600_px_reirhr.svg', link: '/' }
   ];
 
   // --- CAROUSEL LOGIC ---
@@ -443,7 +443,7 @@ const Home = () => {
               <Link
                 key={cat.path}
                 to={cat.path}
-                className={`group relative flex flex-col items-center text-center rounded-2xl ${cat.bgColor} p-4 md:p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1`}
+                className={`group relative flex flex-col items-center text-center rounded-2xl ${cat.bgColor} border border-gray-200 p-4 md:p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-gray-300`}
               >
                 {/* Category Name */}
                 <h3 className="text-sm md:text-base font-semibold text-gray-800 mb-0.5 leading-tight">
