@@ -289,17 +289,35 @@ const Home = () => {
           </div>
         </div>
         {/* Mobile Banner */}
-        <div className="block lg:hidden w-full">
-          <Link to="/sale">
-            <img 
-              src="https://res.cloudinary.com/daxdjob49/image/upload/v1770461279/b9b6c7c0-6754-41c0-82ff-bdb204d2aff3.png" 
-              alt="Mobile Banner" 
-              className="w-full h-auto object-cover block" 
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </Link>
+        <div className="block lg:hidden relative w-full overflow-hidden">
+          <div className="relative w-full">
+            {carouselSlides.map((slide, index) => (
+              <Link
+                to={slide.link}
+                key={index}
+                className={`${index === 0 ? 'relative' : 'absolute inset-0'} transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+              >
+                <img
+                  src={slide.image}
+                  alt="Banner"
+                  className="w-full h-auto object-cover block"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "low"}
+                  decoding="async"
+                />
+              </Link>
+            ))}
+          </div>
+          {/* Mobile Indicators */}
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+            {carouselSlides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${index === currentSlide ? 'w-6 bg-gray-800' : 'w-2 bg-gray-400 hover:bg-gray-600'}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -484,17 +502,13 @@ const Home = () => {
       <InstagramReels />
 
       {/* Banner Section */}
-      <section className="w-full bg-[#F7F4EE]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="overflow-hidden rounded-xl shadow-md">
-            <img
-              src="https://hotgadget.in/cdn/shop/files/65_34eeecb0-6ddd-487f-ba48-e52ebcc2ba85.jpg?v=1769032871&width=1920"
-              alt="Special Offer Banner"
-              className="w-full h-auto object-cover"
-              loading="lazy"
-            />
-          </div>
-        </div>
+      <section className="w-full">
+        <img
+          src="https://res.cloudinary.com/daxdjob49/image/upload/v1770548056/e5ea66c9-6447-4853-8fcc-fdc50f760473.png"
+          alt="Special Offer Banner"
+          className="w-full h-auto object-cover"
+          loading="lazy"
+        />
       </section>
 
       {/* Top Selling Men's Watches Section */}

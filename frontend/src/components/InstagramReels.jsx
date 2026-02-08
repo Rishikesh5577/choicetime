@@ -186,16 +186,16 @@ const InstagramReels = () => {
 
   if (loading) {
     return (
-      <section className="pt-2 md:pt-4 pb-12 md:pb-20 bg-[#F7F4EE]">
+      <section className="pt-8 md:pt-12 pb-12 md:pb-20 bg-[#1a1a2e]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 md:mb-14">
-            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
-              Reels
+            <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
+              Trending Reels
             </h2>
-            <p className="text-gray-500 mt-2 text-sm md:text-base">Watch our latest videos</p>
+            <p className="text-gray-400 mt-2 text-sm md:text-base">Watch our latest videos</p>
           </div>
           <div className="flex items-center justify-center h-48">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
           </div>
         </div>
       </section>
@@ -207,20 +207,20 @@ const InstagramReels = () => {
   }
 
   return (
-    <section className="pt-2 md:pt-4 pb-12 md:pb-20 bg-[#F7F4EE]">
+    <section className="pt-8 md:pt-12 pb-12 md:pb-20 bg-[#1a1a2e]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Section Header - Matching Shop By Category style */}
+        {/* Section Header */}
         <div className="text-center mb-8 md:mb-10">
-          <h2 className="text-2xl md:text-4xl font-bold text-gray-900 tracking-tight">
-            Reels
+          <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
+            Trending Reels
           </h2>
-          <p className="text-gray-500 mt-2 text-sm md:text-base">
+          <p className="text-gray-400 mt-2 text-sm md:text-base">
             Watch our latest videos{' '}
             <a 
               href="https://www.instagram.com/choice_collection_kothrud" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-pink-600 hover:text-pink-700 transition-colors font-medium"
+              className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent hover:from-pink-300 hover:to-orange-300 transition-colors font-semibold"
             >
               @choice_collection_kothrud
             </a>
@@ -232,9 +232,9 @@ const InstagramReels = () => {
           {/* Left Arrow */}
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors -ml-2 md:-ml-5"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center hover:bg-white/20 transition-colors -ml-2 md:-ml-5"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -253,9 +253,9 @@ const InstagramReels = () => {
           {/* Right Arrow */}
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors -mr-2 md:-mr-5"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center hover:bg-white/20 transition-colors -mr-2 md:-mr-5"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
