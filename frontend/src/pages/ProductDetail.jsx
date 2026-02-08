@@ -148,7 +148,10 @@ const ProductDetail = () => {
         if (foundData.data.product.sizes?.length > 0) setSelectedSize(foundData.data.product.sizes[0]);
         if (foundData.data.product.colorOptions?.length > 0) setSelectedColor(foundData.data.product.colorOptions[0]);
         else if (foundData.data.product.colors?.length > 0) setSelectedColor(foundData.data.product.colors[0]);
-        if (foundData.data.product.boxOptions?.length > 0) setSelectedBoxType(foundData.data.product.boxOptions[0]);
+        if (foundData.data.product.boxOptions?.length > 0) {
+          const firstBox = foundData.data.product.boxOptions[0];
+          setSelectedBoxType(typeof firstBox === 'string' ? firstBox : firstBox.name);
+        }
         // Fetch recommended products after product is loaded
         fetchRecommendedProducts(foundData.data.product);
         fetchTrendingProducts(foundData.data.product);
@@ -593,10 +596,22 @@ const ProductDetail = () => {
     }
   };
 
+  // Get the price of the currently selected box option
+  const getSelectedBoxPrice = () => {
+    if (!selectedBoxType || !product?.boxOptions?.length) return 0;
+    const found = product.boxOptions.find((opt) =>
+      typeof opt === 'string' ? opt === selectedBoxType : opt.name === selectedBoxType
+    );
+    if (!found || typeof found === 'string') return 0;
+    return Number(found.price) || 0;
+  };
+
+  const selectedBoxPrice = getSelectedBoxPrice();
+
   const handleAddToCart = async () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     try {
-      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType);
+      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType, selectedBoxPrice);
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);
     }
@@ -605,7 +620,7 @@ const ProductDetail = () => {
   const handleBuyNow = async () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     try {
-      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType);
+      await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType, selectedBoxPrice);
       navigate('/checkout');
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);
@@ -911,8 +926,11 @@ const ProductDetail = () => {
               </div>
 
               {/* Price Section */}
-              <div className="flex items-baseline gap-2 pb-3 border-b border-gray-200">
-                <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">₹{finalPrice.toLocaleString()}</span>
+              <div className="flex flex-wrap items-baseline gap-2 pb-3 border-b border-gray-200">
+                <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">₹{(finalPrice + selectedBoxPrice).toLocaleString()}</span>
+                {selectedBoxPrice > 0 && (
+                  <span className="text-xs text-gray-500">(₹{finalPrice.toLocaleString()} + ₹{selectedBoxPrice} box)</span>
+                )}
                 {originalPrice > finalPrice && (
                   <>
                     <span className="text-sm sm:text-base text-gray-400 line-through">₹{originalPrice.toLocaleString()}</span>
@@ -984,11 +1002,13 @@ const ProductDetail = () => {
                   <label className="block text-xs sm:text-sm font-medium text-gray-900 mb-1.5">Select Box Type</label>
                   <div className="flex flex-wrap gap-1.5">
                     {product.boxOptions.map((boxOpt) => {
-                      const isSelected = selectedBoxType === boxOpt;
+                      const boxName = typeof boxOpt === 'string' ? boxOpt : boxOpt.name;
+                      const boxPrice = typeof boxOpt === 'string' ? 0 : (Number(boxOpt.price) || 0);
+                      const isSelected = selectedBoxType === boxName;
                       return (
                         <button
-                          key={boxOpt}
-                          onClick={() => setSelectedBoxType(boxOpt)}
+                          key={boxName}
+                          onClick={() => setSelectedBoxType(boxName)}
                           className={`px-3 py-1.5 rounded-md border transition-all flex items-center gap-1.5 text-xs sm:text-sm ${isSelected
                             ? 'border-gray-900 bg-gray-900 text-white'
                             : 'border-gray-200 hover:border-gray-400 text-gray-700'
@@ -997,7 +1017,10 @@ const ProductDetail = () => {
                           <svg className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
-                          <span className="font-medium">{boxOpt}</span>
+                          <span className="font-medium">{boxName}</span>
+                          <span className={`text-xs ${isSelected ? 'text-green-300' : 'text-gray-500'}`}>
+                            {boxPrice > 0 ? `+₹${boxPrice}` : 'FREE'}
+                          </span>
                           {isSelected && (
                             <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1007,6 +1030,9 @@ const ProductDetail = () => {
                       );
                     })}
                   </div>
+                  {selectedBoxPrice > 0 && (
+                    <p className="text-xs text-gray-500 mt-1.5">Box price +₹{selectedBoxPrice} will be added to total</p>
+                  )}
                 </div>
               )}
 

@@ -120,10 +120,10 @@ export const cartAPI = {
     return apiRequest('/cart');
   },
 
-  addToCart: async (product, quantity = 1, size = '', color = '', boxType = '') => {
+  addToCart: async (product, quantity = 1, size = '', color = '', boxType = '', boxPrice = 0) => {
     return apiRequest('/cart/add', {
       method: 'POST',
-      body: JSON.stringify({ product, quantity, size, color, boxType }),
+      body: JSON.stringify({ product, quantity, size, color, boxType, boxPrice }),
     });
   },
 

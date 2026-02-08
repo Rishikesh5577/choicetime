@@ -242,6 +242,8 @@ const Cart = () => {
 
                   // Normalize price
                   const productPrice = product.finalPrice || product.price || 0;
+                  const boxPrice = Number(item.boxPrice) || 0;
+                  const itemUnitPrice = productPrice + boxPrice;
 
                   return (
                     <div key={itemId} className="p-5 sm:p-6 border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
@@ -270,10 +272,10 @@ const Cart = () => {
                               <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                                 {item.size && <span className="text-xs text-gray-500">Size: <span className="font-medium text-gray-700">{item.size}</span></span>}
                                 {item.color && <span className="text-xs text-gray-500">Color: <span className="font-medium text-gray-700">{item.color}</span></span>}
-                                {item.boxType && <span className="text-xs text-gray-500">Box: <span className="font-medium text-gray-700">{item.boxType}</span></span>}
+                                {item.boxType && <span className="text-xs text-gray-500">Box: <span className="font-medium text-gray-700">{item.boxType}{boxPrice > 0 ? ` (+₹${boxPrice})` : ''}</span></span>}
                               </div>
                             )}
-                            <p className="mt-1 text-sm font-semibold text-gray-900">₹{productPrice.toLocaleString()}</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">₹{itemUnitPrice.toLocaleString()}</p>
                             {/* Mobile Only Remove */}
                             <button
                               onClick={() => removeFromCart(itemId)}
@@ -308,7 +310,7 @@ const Cart = () => {
                         <div className="sm:col-span-3 flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-end gap-2">
                           <span className="text-sm sm:hidden font-medium text-gray-600">Total:</span>
                           <div className="text-right">
-                            <p className="text-base sm:text-lg font-semibold text-gray-900">₹{(productPrice * item.quantity).toLocaleString()}</p>
+                            <p className="text-base sm:text-lg font-semibold text-gray-900">₹{(itemUnitPrice * item.quantity).toLocaleString()}</p>
                             <button
                               onClick={() => removeFromCart(itemId)}
                               className="hidden sm:flex items-center justify-end mt-2 text-xs text-gray-500 hover:text-red-600 transition-colors"

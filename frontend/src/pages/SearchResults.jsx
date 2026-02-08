@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
 import { searchAPI } from '../utils/api';
-import { useToast } from '../components/ToastContainer';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const { error: showError } = useToast();
-  
+
+  // State for Data
+  const [allProducts, setAllProducts] = useState([]);
+  const [filteredList, setFilteredList] = useState([]);
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+
   const [isLoading, setIsLoading] = useState(false);
+
+  // State for Pagination & Filters
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     priceRange: null,
     brands: [],
@@ -20,40 +24,35 @@ const SearchResults = () => {
     sortBy: null,
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 12;
 
+  // Fetch search results
   useEffect(() => {
     if (query) {
       fetchSearchResults();
+      setFilters({ priceRange: null, brands: [], sizes: [], sortBy: null });
     }
   }, [query]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [products, filters]);
 
   const fetchSearchResults = async () => {
     setIsLoading(true);
     try {
       const response = await searchAPI.searchProducts(query);
       if (response.success) {
-        setProducts(response.data.products || []);
+        setAllProducts(response.data.products || []);
       } else {
-        showError('Failed to search products');
-        setProducts([]);
+        setAllProducts([]);
       }
     } catch (error) {
       console.error('Search error:', error);
-      showError('Error searching products');
-      setProducts([]);
+      setAllProducts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...products];
+  // Filter Logic
+  useEffect(() => {
+    let filtered = [...allProducts];
 
     if (filters.priceRange) {
       filtered = filtered.filter((product) => {
@@ -63,159 +62,340 @@ const SearchResults = () => {
       });
     }
 
-    if (filters.brands.length > 0) {
+    if (filters.brands && filters.brands.length > 0) {
       filtered = filtered.filter((product) => filters.brands.includes(product.brand));
     }
 
-    if (filters.sizes.length > 0) {
+    if (filters.sizes && filters.sizes.length > 0) {
       filtered = filtered.filter((product) => {
         if (!product.sizes || !Array.isArray(product.sizes)) return false;
         return filters.sizes.some((size) => product.sizes.includes(size));
       });
     }
 
-    if (filters.sortBy && filters.sortBy !== 'default') {
-      filtered.sort((a, b) => {
-        const priceA = a.finalPrice || a.price;
-        const priceB = b.finalPrice || b.price;
-        switch (filters.sortBy) {
-          case 'price-low-high': return priceA - priceB;
-          case 'price-high-low': return priceB - priceA;
-          case 'newest': return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-          default: return 0;
-        }
-      });
-    }
+    filtered.sort((a, b) => {
+      const priceA = a.finalPrice || a.price || 0;
+      const priceB = b.finalPrice || b.price || 0;
 
-    setFilteredProducts(filtered);
+      if (!filters.sortBy || filters.sortBy === 'default') {
+        return priceA - priceB;
+      }
+
+      switch (filters.sortBy) {
+        case 'price-low-high':
+          return priceA - priceB;
+        case 'price-high-low':
+          return priceB - priceA;
+        case 'newest':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        default:
+          return priceA - priceB;
+      }
+    });
+
+    setFilteredList(filtered);
     setPage(1);
+  }, [allProducts, filters]);
+
+  // Pagination
+  const itemsPerPage = 24;
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+
+  useEffect(() => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setProducts(filteredList.slice(startIndex, endIndex));
+  }, [filteredList, page, itemsPerPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      const productArea = document.getElementById('search-scroll-area');
+      if (productArea) productArea.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const paginatedProducts = filteredProducts.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE
-  );
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page <= 3) {
+        for (let i = 2; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push('...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push('...');
+        for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const normalizeProduct = (product) => {
+    let images = product.images;
+    if (images && !Array.isArray(images) && typeof images === 'object') {
+      const keys = Object.keys(images).filter(
+        (k) => images[k] && typeof images[k] === 'string' && images[k].trim() !== ''
+      );
+      keys.sort(
+        (a, b) =>
+          (parseInt(String(a).replace(/\D/g, ''), 10) || 0) -
+          (parseInt(String(b).replace(/\D/g, ''), 10) || 0)
+      );
+      images = keys.map((k) => images[k].trim());
+    }
+    if (!Array.isArray(images)) images = [];
+    if (images.length === 0 && (product.image || product.thumbnail)) {
+      images = [product.image || product.thumbnail].filter(Boolean);
+    }
+    const firstImage = images[0] || product.image || product.thumbnail;
+    return {
+      ...product,
+      id: product._id || product.id,
+      images,
+      image: firstImage,
+      price: product.finalPrice || product.price,
+      originalPrice: product.originalPrice || product.mrp || product.price,
+      rating: product.rating || 0,
+      reviews: product.reviewsCount || product.reviews || 0,
+      category: product.category,
+    };
+  };
+
+  const brands = useMemo(() => {
+    const brandSet = new Set();
+    allProducts.forEach((product) => {
+      if (product.brand) brandSet.add(product.brand);
+    });
+    return Array.from(brandSet).sort();
+  }, [allProducts]);
+
+  const sizes = useMemo(() => {
+    const sizeSet = new Set();
+    allProducts.forEach((product) => {
+      if (product.sizes && Array.isArray(product.sizes)) {
+        product.sizes.forEach((size) => sizeSet.add(size));
+      }
+    });
+    return Array.from(sizeSet).sort();
+  }, [allProducts]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      priceRange: null,
+      brands: [],
+      sizes: [],
+      sortBy: null,
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Search Results {query && `for "${query}"`}
-          </h1>
-          <p className="text-gray-600">
-            {isLoading ? 'Searching...' : `Found ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
-          </p>
+    <div className="min-h-[calc(100vh-110px)] md:h-[calc(100vh-110px)] bg-[#F7F4EE] flex flex-col md:flex-row">
+      {/* Left Sidebar - Fixed/Sticky */}
+      <div className="hidden lg:block w-72 flex-shrink-0 border-r border-[#E8E4DD] bg-[#F7F4EE] overflow-y-auto">
+        <div className="p-4">
+          <FilterSidebar
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+            onCloseMobile={() => setShowMobileFilters(false)}
+            brands={brands}
+            sizes={sizes}
+          />
         </div>
+      </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-[4/5] bg-gray-200 rounded-lg mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+      {/* Mobile Filter Overlay */}
+      {showMobileFilters && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileFilters(false)}>
+          <div
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl overflow-y-auto animate-slide-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Header */}
+            <div className="sticky top-0 flex items-center justify-between p-4 bg-white border-b border-gray-100 z-10">
+              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+              <button
+                onClick={() => setShowMobileFilters(false)}
+                className="p-2 -mr-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your search or filters</p>
-            <Link to="/" className="inline-block px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800">
-              Continue Shopping
-            </Link>
-          </div>
-        ) : (
-          <div className="flex gap-8">
-            {/* Filters Sidebar */}
-            <div className="hidden lg:block w-64 flex-shrink-0">
+            {/* Filter Content */}
+            <div className="p-4">
               <FilterSidebar
-                products={products}
                 filters={filters}
-                onFilterChange={setFilters}
-                onClearFilters={() => setFilters({ priceRange: null, brands: [], sizes: [], sortBy: null })}
+                onFilterChange={(newFilters) => {
+                  handleFilterChange(newFilters);
+                }}
+                onClearFilters={() => {
+                  handleClearFilters();
+                }}
+                brands={brands}
+                sizes={sizes}
+                isMobile={true}
               />
             </div>
+            {/* Apply Button */}
+            <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+              <button
+                onClick={() => setShowMobileFilters(false)}
+                className="w-full py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Products Grid */}
-            <div className="flex-1">
-              {/* Mobile Filter Toggle */}
-              <div className="lg:hidden mb-4">
-                <button
-                  onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg flex items-center justify-between"
-                >
-                  <span>Filters</span>
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Mobile Filters */}
-              {showMobileFilters && (
-                <div className="lg:hidden mb-6">
-                  <FilterSidebar
-                    products={products}
-                    filters={filters}
-                    onFilterChange={setFilters}
-                    onClearFilters={() => setFilters({ priceRange: null, brands: [], sizes: [], sortBy: null })}
-                  />
-                </div>
+      {/* Right Content - Scrollable */}
+      <div id="search-scroll-area" className="flex-1 md:overflow-y-auto">
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Header with Title, Count, Filter Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {isLoading ? 'Searching...' : `Search Results for "${query}"`}
+              </h1>
+              {!isLoading && filteredList.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Showing {(page - 1) * itemsPerPage + 1} - {Math.min(page * itemsPerPage, filteredList.length)} of {filteredList.length} products
+                </p>
               )}
+              {!isLoading && filteredList.length === 0 && allProducts.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">No products found</p>
+              )}
+            </div>
 
-              {/* Products */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-                {paginatedProducts.map((product) => (
-                  <ProductCard key={product._id || product.id} product={product} />
+            {/* Filter Toggle - Mobile Only */}
+            <button
+              onClick={() => setShowMobileFilters(true)}
+              className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filters
+            </button>
+          </div>
+
+          {/* Products Grid */}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Searching products...</p>
+            </div>
+          ) : products.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((product) => (
+                  <ProductCard key={product._id || product.id} product={normalizeProduct(product)} />
                 ))}
               </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  {[...Array(totalPages)].map((_, i) => (
+                <div className="mt-8 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
                     <button
-                      key={i + 1}
-                      onClick={() => setPage(i + 1)}
-                      className={`px-4 py-2 border rounded-lg ${
-                        page === i + 1 ? 'bg-gray-900 text-white' : ''
-                      }`}
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page === 1}
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      {i + 1}
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Previous
+                      </span>
                     </button>
-                  ))}
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50"
-                  >
-                    Next
-                  </button>
+
+                    {getPageNumbers().map((pageNum, index) => {
+                      if (pageNum === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`min-w-[40px] px-3 py-2 text-sm font-semibold rounded-lg border-2 transition-all ${
+                            page === pageNum
+                              ? 'bg-gray-900 text-white border-gray-900 shadow-lg'
+                              : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <span className="flex items-center gap-1">
+                        Next
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-500">
+                    Page {page} of {totalPages}
+                  </p>
                 </div>
               )}
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <p className="text-gray-600 text-lg mb-4">No products found for "{query}"</p>
+              {filters.priceRange || filters.brands?.length > 0 || filters.sizes?.length > 0 ? (
+                <button
+                  onClick={handleClearFilters}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear filters to see all results
+                </button>
+              ) : (
+                <Link to="/" className="text-blue-600 hover:text-blue-800 font-medium">
+                  ← Back to Home
+                </Link>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default SearchResults;
-

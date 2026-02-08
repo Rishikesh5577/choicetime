@@ -129,10 +129,10 @@ const FilterSidebar = ({ filters, onFilterChange, onClearFilters, brands = [], s
         </div>
       )}
 
-      {/* Brands - First Filter */}
+      {/* Subcategory - First Filter */}
       {brands.length > 0 && (
         <FilterSection 
-          title="Brand" 
+          title="Subcategory" 
           isOpen={openSections.brand} 
           onToggle={() => toggle('brand')}
           activeCount={filters.brands?.length || 0}

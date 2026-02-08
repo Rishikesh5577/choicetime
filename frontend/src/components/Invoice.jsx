@@ -215,7 +215,7 @@ const Invoice = ({ order, user, onPrint, onDownload }) => {
                       <td className="px-4 py-4 text-center text-sm text-gray-600">
                         <div className="flex flex-col gap-0.5">
                           {item.size && <span>Size: {item.size}</span>}
-                          {item.boxType && <span>Box: {item.boxType}</span>}
+                          {item.boxType && <span>Box: {item.boxType}{Number(item.boxPrice) > 0 ? ` (+₹${item.boxPrice})` : ''}</span>}
                           {!item.size && !item.boxType && '-'}
                         </div>
                       </td>

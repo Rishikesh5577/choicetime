@@ -22,6 +22,10 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  boxPrice: {
+    type: Number,
+    default: 0,
+  },
   price: {
     type: Number,
     required: true,

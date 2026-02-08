@@ -15,6 +15,7 @@ import reelRoutes from './routes/reelRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
 import scratchCardRoutes from './routes/scratchCardRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
 
 dotenv.config();
 
@@ -70,6 +71,10 @@ console.log('✅ Coupon routes registered at /api/coupons');
 // Register wishlist routes
 app.use('/api/wishlist', wishlistRoutes);
 console.log('✅ Wishlist routes registered at /api/wishlist');
+
+// Register search routes
+app.use('/api/search', searchRoutes);
+console.log('✅ Search routes registered at /api/search');
 
 // Register scratch card routes
 app.use('/api/scratch-card', scratchCardRoutes);

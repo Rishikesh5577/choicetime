@@ -23,6 +23,10 @@ const cartItemSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  boxPrice: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const cartSchema = new mongoose.Schema({

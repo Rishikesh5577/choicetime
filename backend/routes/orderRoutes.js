@@ -69,9 +69,10 @@ router.post('/create', protect, async (req, res) => {
       });
     }
 
-    // Calculate total amount
+    // Calculate total amount (product price + box price)
     const subtotal = cart.items.reduce((total, item) => {
-      return total + item.product.price * item.quantity;
+      const boxPrice = Number(item.boxPrice) || 0;
+      return total + (item.product.price + boxPrice) * item.quantity;
     }, 0);
 
     // Apply coupon if provided
@@ -120,7 +121,8 @@ router.post('/create', protect, async (req, res) => {
         size: item.size,
         color: item.color,
         boxType: item.boxType || '',
-        price: item.product.price,
+        boxPrice: Number(item.boxPrice) || 0,
+        price: item.product.price + (Number(item.boxPrice) || 0),
       })),
       totalAmount,
       coupon: appliedCouponCode ? { code: appliedCouponCode, discount: couponDiscount } : { code: '', discount: 0 },

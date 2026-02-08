@@ -40,13 +40,13 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const addToCart = async (product, quantity = 1, size = '', color = '', boxType = '') => {
+  const addToCart = async (product, quantity = 1, size = '', color = '', boxType = '', boxPrice = 0) => {
     if (!isAuthenticated) {
       throw new Error('Please login to add items to cart');
     }
 
     try {
-      const response = await cartAPI.addToCart(product, quantity, size, color, boxType);
+      const response = await cartAPI.addToCart(product, quantity, size, color, boxType, boxPrice);
       if (response.success) {
         setCart(response.data.cart.items || []);
       }
@@ -107,7 +107,8 @@ export const CartProvider = ({ children }) => {
     return cart.reduce((total, item) => {
       const product = item.product || item;
       const price = product.finalPrice || product.price || 0;
-      return total + price * item.quantity;
+      const boxPrice = Number(item.boxPrice) || 0;
+      return total + (price + boxPrice) * item.quantity;
     }, 0);
   };
 

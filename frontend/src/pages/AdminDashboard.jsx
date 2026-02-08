@@ -138,7 +138,7 @@ const AdminDashboard = () => {
     quality: '',
     warranty: '',
     colorOptions: '',
-    boxOptions: '',
+    boxOptions: [{ name: '', price: '' }],
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -800,7 +800,13 @@ const AdminDashboard = () => {
       onSale: product.onSale || false,
       isFeatured: product.isFeatured || false,
       colorOptions: product.colorOptions?.join(', ') || '',
-      boxOptions: product.boxOptions?.join(', ') || '',
+      boxOptions: product.boxOptions?.length > 0
+        ? product.boxOptions.map((opt) =>
+            typeof opt === 'string'
+              ? { name: opt, price: '' }
+              : { name: opt.name || '', price: opt.price || '' }
+          )
+        : [{ name: '', price: '' }],
       // Watch specific fields
       model: product.model || '',
       functions: product.functions || '',
@@ -842,9 +848,7 @@ const AdminDashboard = () => {
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
-        boxOptions: productForm.boxOptions
-          ? productForm.boxOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
-          : [],
+        boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',
         functions: productForm.functions || '',
@@ -870,6 +874,14 @@ const AdminDashboard = () => {
     }
   };
 
+  // Helper to build boxOptions payload from form state
+  const buildBoxOptionsPayload = () => {
+    if (!Array.isArray(productForm.boxOptions)) return [];
+    return productForm.boxOptions
+      .filter((opt) => opt.name && opt.name.trim())
+      .map((opt) => ({ name: opt.name.trim(), price: Number(opt.price) || 0 }));
+  };
+
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
@@ -893,9 +905,7 @@ const AdminDashboard = () => {
         colorOptions: productForm.colorOptions
           ? productForm.colorOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
           : [],
-        boxOptions: productForm.boxOptions
-          ? productForm.boxOptions.split(',').map((opt) => opt.trim()).filter(Boolean)
-          : [],
+        boxOptions: buildBoxOptionsPayload(),
         // Watch specific fields
         model: productForm.model || '',
         functions: productForm.functions || '',
@@ -1125,7 +1135,7 @@ const AdminDashboard = () => {
             {viewSubCategoryOptionsFromNav.length > 0 && (
               <div className="bg-white rounded-lg border p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-sm font-medium text-gray-700">Filter by Sub Category:</span>
+                  <span className="text-sm font-medium text-gray-700">Filter by Company:</span>
                   {selectedSubCategory && (
                     <button
                       onClick={() => {
@@ -1194,7 +1204,7 @@ const AdminDashboard = () => {
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subcategory</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
                           <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Sale</th>
@@ -1384,17 +1394,17 @@ const AdminDashboard = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Choose Company</label>
                   <select
-                    name="subCategory"
-                    value={productForm.subCategory}
-                    onChange={handleProductFormChange}
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    disabled={!productForm.category}
-                  >
+                      name="subCategory"
+                      value={productForm.subCategory}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      disabled={!productForm.category}
+                    >
                     <option value="">
                       {productForm.category
-                        ? 'Select Sub Category'
+                        ? 'Select Company'
                         : 'Select Category First'}
                     </option>
                     {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
@@ -1404,7 +1414,7 @@ const AdminDashboard = () => {
                     ))}
                   </select>
                   {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-1">No sub-items for this category</p>
+                    <p className="text-xs text-gray-500 mt-1">No companies for this category</p>
                   )}
                 </div>
                 <div>
@@ -1419,14 +1429,14 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
                   <input
                     name="brand"
                     value={productForm.brand}
                     onChange={handleProductFormChange}
                     required
                     className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Brand name"
+                    placeholder="Subcategory"
                   />
                 </div>
                 <div>
@@ -1521,18 +1531,57 @@ const AdminDashboard = () => {
                     />
                     <p className="text-xs text-gray-500 mt-1">Enter color names separated by commas. Users will choose one when ordering.</p>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
-                    <input
-                      name="boxOptions"
-                      type="text"
-                      value={productForm.boxOptions}
-                      onChange={handleProductFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="e.g. Regular Box, Brand Box"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
-                  </div>
+                </div>
+                {/* Box Options with Price */}
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Box Options (Name + Price)</label>
+                  {(Array.isArray(productForm.boxOptions) ? productForm.boxOptions : [{ name: '', price: '' }]).map((boxOpt, idx) => (
+                    <div key={idx} className="flex items-center gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={boxOpt.name}
+                        onChange={(e) => {
+                          const updated = [...productForm.boxOptions];
+                          updated[idx] = { ...updated[idx], name: e.target.value };
+                          setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                        }}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                        placeholder="Box name (e.g. Regular Box)"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        value={boxOpt.price}
+                        onChange={(e) => {
+                          const updated = [...productForm.boxOptions];
+                          updated[idx] = { ...updated[idx], price: e.target.value };
+                          setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                        }}
+                        className="w-28 border rounded-lg px-3 py-2 text-sm"
+                        placeholder="Price (₹)"
+                      />
+                      {productForm.boxOptions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = productForm.boxOptions.filter((_, i) => i !== idx);
+                            setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setProductForm((prev) => ({ ...prev, boxOptions: [...(prev.boxOptions || []), { name: '', price: '' }] }))}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+                  >
+                    + Add Box Option
+                  </button>
+                  <p className="text-xs text-gray-500 mt-1">Enter 0 for free box. Price will be added to product price when user selects this box.</p>
                 </div>
               </div>
 
@@ -1798,7 +1847,7 @@ const AdminDashboard = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Choose Company</label>
                     <select
                       name="subCategory"
                       value={productForm.subCategory}
@@ -1807,7 +1856,7 @@ const AdminDashboard = () => {
                       disabled={!productForm.category}
                     >
                       <option value="">
-                        {productForm.category ? 'Select Sub Category' : 'Select Category First'}
+                        {productForm.category ? 'Select Company' : 'Select Category First'}
                       </option>
                       {productSubCategoryOptionsFromNav.map((subOpt, idx) => (
                         <option key={idx} value={subOpt.value}>
@@ -1816,7 +1865,7 @@ const AdminDashboard = () => {
                       ))}
                     </select>
                     {productForm.category && productSubCategoryOptionsFromNav.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-1">No sub-items for this category</p>
+                      <p className="text-xs text-gray-500 mt-1">No companies for this category</p>
                     )}
                   </div>
                   <div>
@@ -1830,7 +1879,7 @@ const AdminDashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
                     <input
                       name="brand"
                       value={productForm.brand}
@@ -1929,18 +1978,57 @@ const AdminDashboard = () => {
                       />
                       <p className="text-xs text-gray-500 mt-1">Enter color names separated by commas. Users will choose one when ordering.</p>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Box Options (comma separated)</label>
-                      <input
-                        name="boxOptions"
-                        type="text"
-                        value={productForm.boxOptions}
-                        onChange={handleProductFormChange}
-                        className="w-full border rounded-lg px-3 py-2 text-sm"
-                        placeholder="e.g. Regular Box, Brand Box"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Enter box/packaging types separated by commas. Users will choose one when ordering.</p>
-                    </div>
+                  </div>
+                  {/* Box Options with Price */}
+                  <div className="mt-4">
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Box Options (Name + Price)</label>
+                    {(Array.isArray(productForm.boxOptions) ? productForm.boxOptions : [{ name: '', price: '' }]).map((boxOpt, idx) => (
+                      <div key={idx} className="flex items-center gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={boxOpt.name}
+                          onChange={(e) => {
+                            const updated = [...productForm.boxOptions];
+                            updated[idx] = { ...updated[idx], name: e.target.value };
+                            setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                          }}
+                          className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                          placeholder="Box name (e.g. Regular Box)"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={boxOpt.price}
+                          onChange={(e) => {
+                            const updated = [...productForm.boxOptions];
+                            updated[idx] = { ...updated[idx], price: e.target.value };
+                            setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                          }}
+                          className="w-28 border rounded-lg px-3 py-2 text-sm"
+                          placeholder="Price (₹)"
+                        />
+                        {productForm.boxOptions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = productForm.boxOptions.filter((_, i) => i !== idx);
+                              setProductForm((prev) => ({ ...prev, boxOptions: updated }));
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setProductForm((prev) => ({ ...prev, boxOptions: [...(prev.boxOptions || []), { name: '', price: '' }] }))}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+                    >
+                      + Add Box Option
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">Enter 0 for free box. Price will be added to product price when user selects this box.</p>
                   </div>
                 </div>
 
@@ -2281,7 +2369,7 @@ const AdminDashboard = () => {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subcategory</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
@@ -2607,10 +2695,10 @@ const AdminDashboard = () => {
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Subcategories</label>
-                    <button type="button" onClick={handleAddSubItemRow} className="text-sm text-blue-600 hover:underline">+ Add subcategory</button>
+                    <label className="block text-sm font-medium text-gray-700">Company Names</label>
+                    <button type="button" onClick={handleAddSubItemRow} className="text-sm text-blue-600 hover:underline">+ Add company</button>
                   </div>
-                  <p className="text-xs text-gray-500 mb-2">Add one or more subcategories. They will appear as dropdown links under this category.</p>
+                  <p className="text-xs text-gray-500 mb-2">Add one or more company names. They will appear as dropdown links under this category.</p>
                   <div className="space-y-2">
                     {subItemInputs.map((sub, idx) => (
                       <div key={idx} className="flex flex-wrap gap-2 items-center">
@@ -2618,7 +2706,7 @@ const AdminDashboard = () => {
                           value={sub.name || ''}
                           onChange={(e) => handleSubItemChange(idx, 'name', e.target.value)}
                           className="border rounded px-2 py-1.5 text-sm w-48"
-                          placeholder="e.g. View All, Analog, Smart"
+                          placeholder="e.g. Fossil, Titan, Casio"
                         />
                         <button type="button" onClick={() => handleRemoveSubItem(idx)} className="text-red-600 text-sm">Remove</button>
                       </div>
@@ -2654,7 +2742,7 @@ const AdminDashboard = () => {
                         <p className="font-medium text-gray-900">{cat.name}</p>
                         <p className="text-xs text-gray-500">{cat.path}</p>
                         {cat.subItems?.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">Subcategories: {cat.subItems.map((s) => s.name).join(', ')}</p>
+                          <p className="text-xs text-gray-500 mt-1">Companies: {cat.subItems.map((s) => s.name).join(', ')}</p>
                         )}
                       </div>
                       <div className="flex gap-2">

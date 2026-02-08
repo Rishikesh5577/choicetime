@@ -30,7 +30,7 @@ router.get('/', protect, async (req, res) => {
 // Add item to cart
 router.post('/add', protect, async (req, res) => {
   try {
-    const { product, quantity = 1, size = '', color = '', boxType = '' } = req.body;
+    const { product, quantity = 1, size = '', color = '', boxType = '', boxPrice = 0 } = req.body;
 
     if (!product) {
       return res.status(400).json({
@@ -74,7 +74,7 @@ router.post('/add', protect, async (req, res) => {
       cart.items[existingItemIndex].quantity += quantity;
     } else {
       // Add new item with normalized product
-      cart.items.push({ product: normalizedProduct, quantity, size, color, boxType });
+      cart.items.push({ product: normalizedProduct, quantity, size, color, boxType, boxPrice: Number(boxPrice) || 0 });
     }
 
     await cart.save();

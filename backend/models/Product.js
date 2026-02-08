@@ -31,7 +31,10 @@ const productSchema = new mongoose.Schema(
 
     color: String,
     colorOptions: [{ type: String }],
-    boxOptions: [{ type: String }],
+    boxOptions: [{
+      name: { type: String, required: true },
+      price: { type: Number, default: 0 },
+    }],
     productDetails: { type: mongoose.Schema.Types.Mixed, default: {} },
 
     // Watch specific fields

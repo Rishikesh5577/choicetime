@@ -25,15 +25,26 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
       setMainImage(product.images?.[0] || product.image || '');
       setSelectedSize(isWatch ? '' : (product.sizes?.[0] || ''));
       setSelectedColor(product.colorOptions?.[0] || product.colors?.[0] || '');
-      setSelectedBoxType(product.boxOptions?.[0] || '');
+      const firstBox = product.boxOptions?.[0];
+      setSelectedBoxType(firstBox ? (typeof firstBox === 'string' ? firstBox : firstBox.name) : '');
     }
   }, [product, isWatch]);
 
   if (!isOpen || !product) return null;
 
+  // Get box price for the selected box type
+  const getQuickViewBoxPrice = () => {
+    if (!selectedBoxType || !product?.boxOptions?.length) return 0;
+    const found = product.boxOptions.find((opt) =>
+      typeof opt === 'string' ? opt === selectedBoxType : opt.name === selectedBoxType
+    );
+    if (!found || typeof found === 'string') return 0;
+    return Number(found.price) || 0;
+  };
+
   const handleAddToCart = async () => {
     try {
-      await addToCart(product, quantity, selectedSize, selectedColor, selectedBoxType);
+      await addToCart(product, quantity, selectedSize, selectedColor, selectedBoxType, getQuickViewBoxPrice());
       success('Product added to cart');
       onClose();
     } catch (err) {
@@ -175,19 +186,23 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Box Type</label>
                     <div className="flex flex-wrap gap-2">
-                      {product.boxOptions.map((boxOpt) => (
-                        <button
-                          key={boxOpt}
-                          onClick={() => setSelectedBoxType(boxOpt)}
-                          className={`px-3 py-2 border rounded-lg text-sm ${
-                            selectedBoxType === boxOpt
-                              ? 'border-gray-900 bg-gray-900 text-white'
-                              : 'border-gray-300 hover:border-gray-400'
-                          }`}
-                        >
-                          {boxOpt}
-                        </button>
-                      ))}
+                      {product.boxOptions.map((boxOpt) => {
+                        const boxName = typeof boxOpt === 'string' ? boxOpt : boxOpt.name;
+                        const boxPrice = typeof boxOpt === 'string' ? 0 : (Number(boxOpt.price) || 0);
+                        return (
+                          <button
+                            key={boxName}
+                            onClick={() => setSelectedBoxType(boxName)}
+                            className={`px-3 py-2 border rounded-lg text-sm ${
+                              selectedBoxType === boxName
+                                ? 'border-gray-900 bg-gray-900 text-white'
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            {boxName} <span className="text-xs opacity-75">{boxPrice > 0 ? `+₹${boxPrice}` : 'FREE'}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
