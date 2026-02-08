@@ -230,7 +230,7 @@ const Home = () => {
   }, []);
 
   const carouselSlides = [
-    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770548587/Brown_Dark_Turquoise_Elegant_Classic_Watch_Product_Facebook_Ad_1600_x_600_px_reirhr.svg', link: '/' }
+    { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770548587/Brown_Dark_Turquoise_Elegant_Classic_Watch_Product_Facebook_Ad_1600_x_600_px_reirhr.svg', mobileImage: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770550307/b480c629-5027-45f1-bb8a-ea4c9ba7d6f3.png', link: '/' }
   ];
 
   // --- CAROUSEL LOGIC ---
@@ -250,7 +250,7 @@ const Home = () => {
 
       {/* --- HERO SECTION (Restored & Top Margin Removed) --- */}
       <div className="relative w-full overflow-hidden group">
-        <div className="hidden lg:block relative w-full">
+        <div className="hidden md:block relative w-full">
           <div className="relative w-full" style={{ aspectRatio: '2161/771' }}>
             {carouselSlides.map((slide, index) => (
               <Link
@@ -289,7 +289,7 @@ const Home = () => {
           </div>
         </div>
         {/* Mobile Banner */}
-        <div className="block lg:hidden relative w-full overflow-hidden">
+        <div className="block md:hidden relative w-full overflow-hidden">
           <div className="relative w-full">
             {carouselSlides.map((slide, index) => (
               <Link
@@ -298,7 +298,7 @@ const Home = () => {
                 className={`${index === 0 ? 'relative' : 'absolute inset-0'} transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
               >
                 <img
-                  src={slide.image}
+                  src={slide.mobileImage || slide.image}
                   alt="Banner"
                   className="w-full h-auto object-cover block"
                   loading={index === 0 ? "eager" : "lazy"}
