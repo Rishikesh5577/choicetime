@@ -4,22 +4,22 @@ const categories = [
   { 
     label: "Men's Watches", 
     path: '/mens-watches', 
-    image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?q=80&w=400&auto=format&fit=crop'
+    image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770667481/b4976978-8ee9-4b94-8c4d-eb1a0b48e650.png'
   },
   { 
     label: "Women's Watches", 
     path: '/womens-watches', 
-    image: 'https://www.titan.co.in/dw/image/v2/BKDD_PRD/on/demandware.static/-/Sites-titan-master-catalog/default/dw5487e70b/images/Titan/Catalog/2606WM08_1.jpg?sw=400&sh=400'
+    image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770666728/19fe40b9-8c6c-4fbe-aed4-9341c931600e.png'
   },
   { 
     label: "Men's Wallet", 
     path: '/mens-wallet', 
-    image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=400&auto=format&fit=crop'
+    image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770666845/779f9291-423b-4889-90ba-ee7dc5631aa2.png'
   },
   { 
     label: "Men's Belt", 
     path: '/mens-belts', 
-    image: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?q=80&w=400&auto=format&fit=crop'
+    image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770666752/b025a01b-ace8-4a69-aba5-6f3390372142.png'
   },
   { 
     label: "Men's Perfumes", 
