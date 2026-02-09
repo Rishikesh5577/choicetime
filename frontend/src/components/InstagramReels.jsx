@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { reelAPI } from '../utils/api';
 
-// Individual Video Reel Component - Instagram Style
+// Individual Video Reel Component
 const VideoReel = ({ reel }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -36,13 +36,13 @@ const VideoReel = ({ reel }) => {
   };
 
   return (
-    <div className="flex-shrink-0 w-[180px] sm:w-[200px]">
-      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-md group">
-        {/* Video Container - Instagram reel aspect ratio */}
+    <div className="flex-shrink-0 w-[160px] sm:w-[180px] md:w-[190px]">
+      <div className="relative rounded-xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 group">
+        {/* Video Container - 9:16 aspect ratio */}
         <div className="aspect-[9/16] relative">
           {hasError ? (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white text-xs">
-              Failed
+            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
+              Failed to load
             </div>
           ) : (
             <video
@@ -64,11 +64,11 @@ const VideoReel = ({ reel }) => {
           {/* Play Button Overlay */}
           {!isPlaying && !hasError && (
             <div 
-              className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
+              className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
               onClick={handlePlay}
             >
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+              <div className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center shadow-md hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               </div>
@@ -81,8 +81,8 @@ const VideoReel = ({ reel }) => {
               className="absolute inset-0 flex items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
               onClick={handlePlay}
             >
-              <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="w-11 h-11 rounded-full bg-black/40 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                 </svg>
               </div>
@@ -93,7 +93,7 @@ const VideoReel = ({ reel }) => {
           {!hasError && (
             <button
               onClick={toggleMute}
-              className="absolute bottom-10 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors z-10"
+              className="absolute bottom-10 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
             >
               {isMuted ? (
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,16 +108,9 @@ const VideoReel = ({ reel }) => {
             </button>
           )}
 
-          {/* Instagram Reels Icon */}
-          <div className="absolute top-2.5 right-2.5">
-            <svg className="w-5 h-5 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/>
-            </svg>
-          </div>
-
           {/* Title at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-            <p className="text-white text-xs font-medium truncate">{reel.title}</p>
+          <div className="absolute bottom-0 left-0 right-0 p-2.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+            <p className="text-white text-[11px] font-medium truncate">{reel.title}</p>
           </div>
         </div>
       </div>
@@ -126,9 +119,9 @@ const VideoReel = ({ reel }) => {
       {reel.productLink && (
         <a
           href={reel.productLink}
-          className="block w-full mt-2 py-2 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white text-center text-sm font-semibold rounded-lg transition-all shadow-sm"
+          className="block w-full mt-2 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-center text-xs font-semibold rounded-lg transition-colors tracking-wide"
         >
-          Buy Now
+          Shop Now
         </a>
       )}
     </div>
@@ -144,7 +137,6 @@ const InstagramReels = () => {
   useEffect(() => {
     const fetchReels = async () => {
       try {
-        // Load from cache first for instant display
         const cached = localStorage.getItem('instagramReels');
         if (cached) {
           try {
@@ -156,11 +148,9 @@ const InstagramReels = () => {
           } catch (e) {}
         }
         
-        // Fetch fresh data from API
         const response = await reelAPI.getReels();
         if (response.success) {
           setReels(response.data.reels || []);
-          // Update cache
           localStorage.setItem('instagramReels', JSON.stringify(response.data));
         }
       } catch (err) {
@@ -176,7 +166,7 @@ const InstagramReels = () => {
 
   const scroll = (direction) => {
     if (scrollRef.current) {
-      const scrollAmount = 180;
+      const scrollAmount = 200;
       scrollRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -186,16 +176,16 @@ const InstagramReels = () => {
 
   if (loading) {
     return (
-      <section className="pt-8 md:pt-12 pb-12 md:pb-20 bg-[#1a1a2e]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 md:mb-14">
-            <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
+      <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8 md:mb-10">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
               Trending Reels
             </h2>
-            <p className="text-gray-400 mt-2 text-sm md:text-base">Watch our latest videos</p>
+            <div className="mt-2 mx-auto w-12 h-0.5 bg-gray-800 rounded-full"></div>
           </div>
           <div className="flex items-center justify-center h-48">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+            <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-300 border-t-gray-800"></div>
           </div>
         </div>
       </section>
@@ -207,20 +197,21 @@ const InstagramReels = () => {
   }
 
   return (
-    <section className="pt-8 md:pt-12 pb-12 md:pb-20 bg-[#1a1a2e]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <div className="text-center mb-8 md:mb-10">
-          <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
             Trending Reels
           </h2>
-          <p className="text-gray-400 mt-2 text-sm md:text-base">
-            Watch our latest videos{' '}
+          <div className="mt-2 mx-auto w-12 h-0.5 bg-gray-800 rounded-full"></div>
+          <p className="text-gray-500 mt-3 text-xs md:text-sm">
+            Watch & shop from{' '}
             <a 
               href="https://www.instagram.com/choice_collection_kothrud" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="bg-gradient-to-r from-pink-400 to-orange-400 bg-clip-text text-transparent hover:from-pink-300 hover:to-orange-300 transition-colors font-semibold"
+              className="text-gray-800 font-semibold hover:underline"
             >
               @choice_collection_kothrud
             </a>
@@ -228,13 +219,13 @@ const InstagramReels = () => {
         </div>
 
         {/* Scroll Controls & Reels Container */}
-        <div className="relative">
+        <div className="relative group/scroll">
           {/* Left Arrow */}
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center hover:bg-white/20 transition-colors -ml-2 md:-ml-5"
+            className="absolute left-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -ml-1 md:-ml-4 opacity-0 group-hover/scroll:opacity-100"
           >
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -242,9 +233,10 @@ const InstagramReels = () => {
           {/* Horizontal Scroll Reels */}
           <div 
             ref={scrollRef}
-            className="flex gap-4 overflow-x-auto pb-4 px-2 scrollbar-hide scroll-smooth"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="flex gap-3 md:gap-4 overflow-x-auto pb-2 px-1 scroll-smooth"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
           >
+            <style>{`.scroll-smooth::-webkit-scrollbar { display: none; }`}</style>
             {reels.map((reel) => (
               <VideoReel key={reel._id} reel={reel} />
             ))}
@@ -253,9 +245,9 @@ const InstagramReels = () => {
           {/* Right Arrow */}
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center hover:bg-white/20 transition-colors -mr-2 md:-mr-5"
+            className="absolute right-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -mr-1 md:-mr-4 opacity-0 group-hover/scroll:opacity-100"
           >
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
