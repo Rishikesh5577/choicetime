@@ -181,6 +181,9 @@ export const createProduct = async (req, res) => {
       ...(productData.colorOptions && { colorOptions: productData.colorOptions }),
       ...(productData.boxOptions && { boxOptions: productData.boxOptions }),
       ...(productData.productDetails && { productDetails: productData.productDetails }),
+      // Page position fields
+      pageNumberAll: Number(productData.pageNumberAll ?? 0),
+      pageNumberCategory: Number(productData.pageNumberCategory ?? 0),
       // Watch specific fields
       ...(productData.model && { model: (productData.model || '').trim() }),
       ...(productData.functions && { functions: (productData.functions || '').trim() }),
@@ -237,6 +240,9 @@ export const updateProduct = async (req, res) => {
       ...(productData.stock !== undefined && { inStock: stockNum > 0 }),
       ...(productData.colorOptions !== undefined && { colorOptions: productData.colorOptions }),
       ...(productData.boxOptions !== undefined && { boxOptions: productData.boxOptions }),
+      // Page position fields
+      ...(productData.pageNumberAll !== undefined && { pageNumberAll: Number(productData.pageNumberAll ?? 0) }),
+      ...(productData.pageNumberCategory !== undefined && { pageNumberCategory: Number(productData.pageNumberCategory ?? 0) }),
       // Watch specific fields
       ...(productData.model !== undefined && { model: (productData.model || '').trim() }),
       ...(productData.functions !== undefined && { functions: (productData.functions || '').trim() }),

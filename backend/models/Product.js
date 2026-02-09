@@ -37,6 +37,10 @@ const productSchema = new mongoose.Schema(
     }],
     productDetails: { type: mongoose.Schema.Types.Mixed, default: {} },
 
+    // Page position fields
+    pageNumberAll: { type: Number, default: 0, min: 0 },
+    pageNumberCategory: { type: Number, default: 0, min: 0 },
+
     // Watch specific fields
     model: { type: String, trim: true, default: '' },
     functions: { type: String, trim: true, default: '' },

@@ -35,8 +35,10 @@ export const getProducts = async (req, res) => {
     }
 
     const limitNum = Math.min(parseInt(limit, 10) || 500, 1000);
+    // Sort by page position (lower number = higher priority), then by updatedAt
+    const sortField = category ? 'pageNumberCategory' : 'pageNumberAll';
     const products = await Product.find(query)
-      .sort({ updatedAt: -1 })
+      .sort({ [sortField]: 1, updatedAt: -1 })
       .limit(limitNum)
       .lean();
 

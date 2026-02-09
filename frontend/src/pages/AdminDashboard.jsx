@@ -139,6 +139,8 @@ const AdminDashboard = () => {
     warranty: '',
     colorOptions: '',
     boxOptions: [{ name: '', price: '' }],
+    pageNumberAll: '',
+    pageNumberCategory: '',
   });
   const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
   const [imageUploading, setImageUploading] = useState(false);
@@ -776,6 +778,8 @@ const AdminDashboard = () => {
       itemWeight: '',
       quality: '',
       warranty: '',
+      pageNumberAll: '',
+      pageNumberCategory: '',
     });
     setEditingProduct(null);
     setUploadedImageUrls([]);
@@ -865,6 +869,8 @@ const AdminDashboard = () => {
       itemWeight: product.itemWeight || '',
       quality: product.quality || '',
       warranty: product.warranty || '',
+      pageNumberAll: product.pageNumberAll || '',
+      pageNumberCategory: product.pageNumberCategory || '',
     });
     setUploadedImageUrls(product.images?.length ? [...product.images] : []);
     setActiveSection('edit-product');
@@ -906,6 +912,8 @@ const AdminDashboard = () => {
         itemWeight: productForm.itemWeight || '',
         quality: productForm.quality || '',
         warranty: productForm.warranty || '',
+        pageNumberAll: Number(productForm.pageNumberAll || 0),
+        pageNumberCategory: Number(productForm.pageNumberCategory || 0),
       };
       await adminAPI.createProduct(payload);
       setMessage({ type: 'success', text: 'Product created' });
@@ -961,6 +969,8 @@ const AdminDashboard = () => {
         itemWeight: productForm.itemWeight || '',
         quality: productForm.quality || '',
         warranty: productForm.warranty || '',
+        pageNumberAll: Number(productForm.pageNumberAll || 0),
+        pageNumberCategory: Number(productForm.pageNumberCategory || 0),
       };
       await adminAPI.updateProduct(editingProduct._id, payload);
       setMessage({ type: 'success', text: 'Product updated' });
@@ -1527,6 +1537,35 @@ const AdminDashboard = () => {
                   <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
                 </div>
               </div>
+              {/* Page Position Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">All Page Position No.</label>
+                  <input
+                    name="pageNumberAll"
+                    type="number"
+                    min="0"
+                    value={productForm.pageNumberAll}
+                    onChange={handleProductFormChange}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="e.g. 1, 2, 3..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Product position on the All Products page (lower = first)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Page Position No.</label>
+                  <input
+                    name="pageNumberCategory"
+                    type="number"
+                    min="0"
+                    value={productForm.pageNumberCategory}
+                    onChange={handleProductFormChange}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="e.g. 1, 2, 3..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Product position on its category page (lower = first)</p>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Product Images</label>
                 {/* Upload Area */}
@@ -2015,6 +2054,35 @@ const AdminDashboard = () => {
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
                     <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
+                  </div>
+                </div>
+                {/* Page Position Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">All Page Position No.</label>
+                    <input
+                      name="pageNumberAll"
+                      type="number"
+                      min="0"
+                      value={productForm.pageNumberAll}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 1, 2, 3..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Product position on the All Products page (lower = first)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category Page Position No.</label>
+                    <input
+                      name="pageNumberCategory"
+                      type="number"
+                      min="0"
+                      value={productForm.pageNumberCategory}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 1, 2, 3..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Product position on its category page (lower = first)</p>
                   </div>
                 </div>
                 <div>
