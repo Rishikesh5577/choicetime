@@ -48,6 +48,8 @@ const ContactUs = () => {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Get in Touch</h2>
 
+              <p className="text-sm font-semibold text-gray-900 mb-4">Choice Collection Kothrud</p>
+
               <div className="space-y-6">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
@@ -57,19 +59,7 @@ const ContactUs = () => {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-sm font-medium text-gray-900">Email</h3>
-                    <p className="text-sm text-gray-600">support@choicetime.com</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-sm font-medium text-gray-900">Phone</h3>
-                    <p className="text-sm text-gray-600">+91 1800-123-4567</p>
+                    <p className="text-sm text-gray-600">choicecollectionkothrud@gmail.com</p>
                   </div>
                 </div>
 
@@ -82,7 +72,7 @@ const ContactUs = () => {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-sm font-medium text-gray-900">Address</h3>
-                    <p className="text-sm text-gray-600">123 Shopping Street<br />Mumbai, India 400001</p>
+                    <p className="text-sm text-gray-600">Shop No.3, Paud Rd, near Hotel Durga Cold Coffee, Tarangan Society, Ideal Colony, Kothrud, Pune, Maharashtra 411038</p>
                   </div>
                 </div>
               </div>
