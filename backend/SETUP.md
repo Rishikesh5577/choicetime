@@ -37,13 +37,27 @@ The server will start on `http://localhost:5000`
 
 ## Step 4: Configure Frontend
 
-The frontend is already configured to connect to `http://localhost:5000/api` by default.
+The frontend is already configured to connect to `http://localhost:5008/api` by default.
 
-If you need to change the API URL, create a `.env` file in the `frontend` directory:
+Create a `.env` file in the `frontend` directory:
 
 ```
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:5008/api
+
+# For "Continue with Google" - use the same Client ID as backend
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
+
+## Google Sign-In (Optional)
+
+To enable "Continue with Google" on login and signup:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create OAuth 2.0 Client ID (Web application) for "Choice time"
+3. Add **Authorized JavaScript origins**: `http://localhost:5173` (dev), `https://yourdomain.com` (prod)
+4. Copy the **Client ID** and add to:
+   - `backend/.env`: `GOOGLE_CLIENT_ID=...`
+   - `frontend/.env`: `VITE_GOOGLE_CLIENT_ID=...`
 
 ## Testing the API
 

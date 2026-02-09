@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 // Helper for left-side static icons
 // Updated to gray-400 for light mode
@@ -177,9 +178,17 @@ const SignUp = () => {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-2 bg-[#F7F4EE] text-gray-500">Or continue with</span>
             </div>
           </div>
+
+          {/* Continue with Google */}
+          <GoogleLoginButton
+            onSuccess={() => navigate('/')}
+            onError={(msg) => setError(msg)}
+            disabled={isLoading}
+            className="mb-4"
+          />
 
           {/* OTP BUTTON */}
           <div>

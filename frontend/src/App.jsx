@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -100,9 +101,19 @@ function AppContent() {
   );
 }
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+const AppProviders = ({ children }) =>
+  googleClientId ? (
+    <GoogleOAuthProvider clientId={googleClientId}>{children}</GoogleOAuthProvider>
+  ) : (
+    children
+  );
+
 function App() {
   return (
     <ErrorBoundary>
+      <AppProviders>
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
@@ -114,6 +125,7 @@ function App() {
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
+      </AppProviders>
     </ErrorBoundary>
   );
 }

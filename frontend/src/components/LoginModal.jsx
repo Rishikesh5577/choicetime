@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import GoogleLoginButton from './GoogleLoginButton';
 
 const LoginModal = ({ isOpen, onClose, redirectTo = null }) => {
   const [formData, setFormData] = useState({
@@ -123,6 +124,24 @@ const LoginModal = ({ isOpen, onClose, redirectTo = null }) => {
               Cancel
             </button>
           </div>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            </div>
+          </div>
+          <GoogleLoginButton
+            onSuccess={() => {
+              onClose();
+              if (redirectTo) navigate(redirectTo);
+              else window.location.reload();
+            }}
+            onError={(msg) => setError(msg)}
+            disabled={isLoading}
+          />
         </form>
 
         <div className="mt-4 text-center text-sm">

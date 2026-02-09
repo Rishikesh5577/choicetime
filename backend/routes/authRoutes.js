@@ -1,4 +1,5 @@
 import express from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import { generateToken } from '../utils/generateToken.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -6,6 +7,12 @@ import { sendOTP } from '../utils/fast2sms.js';
 import { generateOTP, storeOTP, verifyOTP } from '../utils/otpStore.js';
 
 const router = express.Router();
+
+const getGoogleClient = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) return null;
+  return new OAuth2Client(clientId);
+};
 
 // @route   POST /api/auth/signup
 // @desc    Register a new user
@@ -64,6 +71,87 @@ router.post('/signup', async (req, res) => {
       success: false,
       message: 'Error registering user',
       error: error.message,
+    });
+  }
+});
+
+// @route   POST /api/auth/google
+// @desc    Login or signup with Google OAuth
+// @access  Public
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential is required',
+      });
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({
+        success: false,
+        message: 'Google Sign-In is not configured. Add GOOGLE_CLIENT_ID to backend .env',
+      });
+    }
+
+    const googleClient = getGoogleClient();
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google account must have an email',
+      });
+    }
+
+    let user = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { googleId }],
+    });
+
+    if (!user) {
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email: email.toLowerCase(),
+        googleId,
+        phone: '',
+      });
+    } else if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save({ validateBeforeSave: false });
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: user.googleId ? 'Signed in with Google' : 'Account linked with Google',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          role: user.role,
+          isAdmin: user.isAdmin,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    const isServerError = !error.message?.includes('Token') && !error.message?.includes('credential');
+    res.status(isServerError ? 500 : 401).json({
+      success: false,
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Invalid Google credential. Please try again.',
     });
   }
 });
