@@ -16,7 +16,7 @@ const IconChevronRight = () => (
 const carouselSlides = [
   { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770665113/Pink_Red_Minimalist_Feminine_Gift_Box_Sale_Promotion_Banner_1920_x_600_px_ejjeop.svg', mobileImage: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770666099/Happy_Valentine_s_Day_840_x_831_px_e0nmgg.svg', link: '/' },
   { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770662993/16f64e10-e31c-49b7-b6d0-5b23b7f3a6d9.png', mobileImage: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770663972/343fc93f-3a67-493a-8411-a783328b7fb5.png', link: '/' },
-  { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770661687/8f9ef7e9-6eef-43fa-b8e0-91fa2284ec27.png', mobileImage: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770665622/b0543a7e-f12c-427e-ae46-bed09be1e49a.png', link: '/' },
+  { image: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770661687/8f9ef7e9-6eef-43fa-b8e0-91fa2284ec27.png', mobileImage: 'https://res.cloudinary.com/daxdjob49/image/upload/v1770669467/Grey_and_Black_Elegant_Mens_Watch_Poster_840_x_831_px_1_pp7gy6.svg', link: '/' },
 ];
 
 const HeroCarousel = () => {
