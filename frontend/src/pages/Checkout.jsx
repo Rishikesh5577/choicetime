@@ -794,24 +794,24 @@ const Checkout = () => {
               <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
                 <div className="space-y-2.5">
-                  {/* <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                  <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
                     paymentMethod === 'razorpay' 
                       ? 'border-gray-900 bg-gray-50' 
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}> */}
-                  {/* <input
+                  }`}>
+                    <input
                       type="radio"
                       name="paymentMethod"
                       value="razorpay"
                       checked={paymentMethod === 'razorpay'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
-                    /> */}
-                  {/* <div className="flex-1">
+                    />
+                    <div className="flex-1">
                       <div className="text-sm font-medium text-gray-900">Online Payment</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Wallets</div>
-                    </div> */}
-                  {/* </label> */}
+                      <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Net Banking, Wallets</div>
+                    </div>
+                  </label>
                   <label className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${paymentMethod === 'COD'
                       ? 'border-gray-900 bg-gray-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
