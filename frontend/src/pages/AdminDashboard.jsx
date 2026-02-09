@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { adminAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { uploadVideoToCloudinary } from '../utils/cloudinary';
+import { uploadVideoToCloudinary, uploadImageToCloudinary } from '../utils/cloudinary';
 
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -140,6 +140,10 @@ const AdminDashboard = () => {
     colorOptions: '',
     boxOptions: [{ name: '', price: '' }],
   });
+  const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const imageInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [navCategories, setNavCategories] = useState([]);
@@ -774,6 +778,45 @@ const AdminDashboard = () => {
       warranty: '',
     });
     setEditingProduct(null);
+    setUploadedImageUrls([]);
+    setImageUploading(false);
+    setImageUploadProgress(0);
+  };
+
+  // Image upload handlers
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    setImageUploading(true);
+    let completedCount = 0;
+
+    for (const file of files) {
+      try {
+        setImageUploadProgress(Math.round((completedCount / files.length) * 100));
+        const result = await uploadImageToCloudinary(file, (progress) => {
+          const overallProgress = Math.round(((completedCount + progress / 100) / files.length) * 100);
+          setImageUploadProgress(overallProgress);
+        });
+        if (result.success) {
+          setUploadedImageUrls((prev) => [...prev, result.url]);
+        }
+        completedCount++;
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        setMessage({ type: 'error', text: `Failed to upload ${file.name}` });
+        completedCount++;
+      }
+    }
+
+    setImageUploading(false);
+    setImageUploadProgress(0);
+    // Reset file input so same files can be selected again
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const handleRemoveImage = (index) => {
+    setUploadedImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleEditProduct = (product) => {
@@ -823,6 +866,7 @@ const AdminDashboard = () => {
       quality: product.quality || '',
       warranty: product.warranty || '',
     });
+    setUploadedImageUrls(product.images?.length ? [...product.images] : []);
     setActiveSection('edit-product');
   };
 
@@ -838,9 +882,7 @@ const AdminDashboard = () => {
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
         stock: Number(productForm.stock || 0),
-        images: productForm.images
-          ? productForm.images.split(',').map((img) => img.trim()).filter(Boolean)
-          : [],
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
         description: productForm.description || '',
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
@@ -895,9 +937,7 @@ const AdminDashboard = () => {
         originalPrice: Number(productForm.originalPrice || productForm.price),
         discountPercent: Number(productForm.discountPercent || 0),
         stock: Number(productForm.stock || 0),
-        images: productForm.images
-          ? productForm.images.split(',').map((img) => img.trim())
-          : [],
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
         description: productForm.description || '',
         isNewArrival: Boolean(productForm.isNewArrival),
         onSale: Boolean(productForm.onSale),
@@ -1488,15 +1528,56 @@ const AdminDashboard = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image URLs (comma separated)</label>
-                <textarea
-                  name="images"
-                  value={productForm.images}
-                  onChange={handleProductFormChange}
-                  rows="3"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                  placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Images</label>
+                {/* Upload Area */}
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                  onClick={() => !imageUploading && imageInputRef.current?.click()}
+                >
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  {imageUploading ? (
+                    <div className="space-y-2">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-sm text-blue-600 font-medium">Uploading... {imageUploadProgress}%</p>
+                      <div className="w-full bg-gray-200 rounded-full h-2 max-w-xs mx-auto">
+                        <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${imageUploadProgress}%` }}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-sm text-gray-600">Click to upload images</p>
+                      <p className="text-xs text-gray-400">PNG, JPG, WEBP supported. Multiple files allowed.</p>
+                    </div>
+                  )}
+                </div>
+                {/* Image Previews */}
+                {uploadedImageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
+                    {uploadedImageUrls.map((url, index) => (
+                      <div key={index} className="relative group rounded-lg overflow-hidden border bg-gray-50">
+                        <img src={url} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                        >
+                          ×
+                        </button>
+                        <p className="text-[10px] text-gray-500 p-1 truncate">{index + 1}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -1937,14 +2018,56 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image URLs (comma separated)</label>
-                  <textarea
-                    name="images"
-                    value={productForm.images}
-                    onChange={handleProductFormChange}
-                    rows="3"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Images</label>
+                  {/* Upload Area */}
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                    onClick={() => !imageUploading && imageInputRef.current?.click()}
+                  >
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    {imageUploading ? (
+                      <div className="space-y-2">
+                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <p className="text-sm text-blue-600 font-medium">Uploading... {imageUploadProgress}%</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2 max-w-xs mx-auto">
+                          <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${imageUploadProgress}%` }}></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-sm text-gray-600">Click to upload images</p>
+                        <p className="text-xs text-gray-400">PNG, JPG, WEBP supported. Multiple files allowed.</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Image Previews */}
+                  {uploadedImageUrls.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-3">
+                      {uploadedImageUrls.map((url, index) => (
+                        <div key={index} className="relative group rounded-lg overflow-hidden border bg-gray-50">
+                          <img src={url} alt={`Product ${index + 1}`} className="w-full h-24 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                          >
+                            ×
+                          </button>
+                          <p className="text-[10px] text-gray-500 p-1 truncate">{index + 1}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
