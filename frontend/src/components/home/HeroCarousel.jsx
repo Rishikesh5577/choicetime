@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 const IconChevronLeft = () => (
@@ -21,17 +21,47 @@ const carouselSlides = [
 
 const HeroCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const isSwiping = useRef(false);
+  const intervalRef = useRef(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  const resetAutoPlay = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
     }, 5000);
-    return () => clearInterval(interval);
   }, []);
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + carouselSlides.length) % carouselSlides.length);
-  const goToSlide = (index) => setCurrentSlide(index);
+  useEffect(() => {
+    resetAutoPlay();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [resetAutoPlay]);
+
+  const nextSlide = () => { setCurrentSlide((prev) => (prev + 1) % carouselSlides.length); resetAutoPlay(); };
+  const prevSlide = () => { setCurrentSlide((prev) => (prev - 1 + carouselSlides.length) % carouselSlides.length); resetAutoPlay(); };
+  const goToSlide = (index) => { setCurrentSlide(index); resetAutoPlay(); };
+
+  // Touch / Swipe handlers for mobile
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    isSwiping.current = false;
+  };
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+    const diff = Math.abs(touchStartX.current - touchEndX.current);
+    if (diff > 10) isSwiping.current = true;
+  };
+  const handleTouchEnd = (e) => {
+    const diff = touchStartX.current - touchEndX.current;
+    const MIN_SWIPE = 50;
+    if (Math.abs(diff) > MIN_SWIPE) {
+      if (diff > 0) nextSlide();   // swipe left → next
+      else prevSlide();             // swipe right → prev
+      // Prevent the Link navigation when swiping
+      if (isSwiping.current) e.preventDefault();
+    }
+  };
 
   return (
     <div className="relative w-full overflow-hidden group">
@@ -75,18 +105,25 @@ const HeroCarousel = () => {
       </div>
 
       {/* Mobile Banner */}
-      <div className="block md:hidden relative w-full overflow-hidden">
+      <div
+        className="block md:hidden relative w-full overflow-hidden touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="relative w-full">
           {carouselSlides.map((slide, index) => (
             <Link
               to={slide.link}
               key={index}
+              onClick={(e) => { if (isSwiping.current) e.preventDefault(); }}
               className={`${index === 0 ? 'relative' : 'absolute inset-0'} transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
             >
               <img
                 src={slide.mobileImage || slide.image}
                 alt="Banner"
-                className="w-full h-auto object-cover block"
+                className="w-full h-auto object-cover block select-none"
+                draggable={false}
                 loading={index === 0 ? "eager" : "lazy"}
                 fetchPriority={index === 0 ? "high" : "low"}
                 decoding="async"
