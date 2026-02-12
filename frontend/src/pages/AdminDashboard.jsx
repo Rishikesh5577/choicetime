@@ -186,6 +186,12 @@ const AdminDashboard = () => {
   });
   const [editingCoupon, setEditingCoupon] = useState(null);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [successPopup, setSuccessPopup] = useState({ show: false, text: '' });
+
+  const showSuccessPopup = (text) => {
+    setSuccessPopup({ show: true, text });
+    setTimeout(() => setSuccessPopup({ show: false, text: '' }), 2500);
+  };
 
   const isAdmin = user?.isAdmin;
 
@@ -600,6 +606,32 @@ const AdminDashboard = () => {
     }));
   }, [selectedNavCategoryForProduct]);
 
+  // Fetch unique brands/subcategories from existing products for the selected category
+  const [availableBrands, setAvailableBrands] = useState([]);
+  const [isCustomBrand, setIsCustomBrand] = useState(false);
+
+  useEffect(() => {
+    const fetchBrandsForCategory = async () => {
+      if (!productForm.category) { setAvailableBrands([]); return; }
+      try {
+        const response = await adminAPI.getProducts(productForm.category);
+        if (response.success && response.data?.products) {
+          const brands = [...new Set(
+            response.data.products
+              .map((p) => (p.brand || '').trim())
+              .filter(Boolean)
+          )].sort();
+          setAvailableBrands(brands);
+        }
+      } catch (e) {
+        console.error('Error fetching brands:', e);
+      }
+    };
+    if (activeSection === 'add-product' || activeSection === 'edit-product') {
+      fetchBrandsForCategory();
+    }
+  }, [productForm.category, activeSection]);
+
   const handleCategoryFormChange = (e) => {
     const { name, value } = e.target;
     setCategoryForm((prev) => ({ ...prev, [name]: value }));
@@ -783,6 +815,7 @@ const AdminDashboard = () => {
     });
     setEditingProduct(null);
     setUploadedImageUrls([]);
+    setIsCustomBrand(false);
     setImageUploading(false);
     setImageUploadProgress(0);
   };
@@ -917,6 +950,7 @@ const AdminDashboard = () => {
       };
       await adminAPI.createProduct(payload);
       setMessage({ type: 'success', text: 'Product created' });
+      showSuccessPopup('Product added successfully!');
       resetForm();
       fetchProducts(productForm.category);
     } catch (error) {
@@ -993,7 +1027,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const filteredOrders = useMemo(() => orders.slice(0, 10), [orders]);
+  const filteredOrders = useMemo(() => (orders || []).slice(0, 10), [orders]);
 
   if (isLoading) {
     return (
@@ -1044,17 +1078,17 @@ const AdminDashboard = () => {
                   <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Revenue</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">
-                      ₹{summary.totalRevenue.toLocaleString()}
+                      ₹{(summary.totalRevenue ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Orders</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalOrders}</p>
-                    <p className="text-xs text-gray-500">{summary.pendingOrders} pending</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalOrders ?? 0}</p>
+                    <p className="text-xs text-gray-500">{summary.pendingOrders ?? 0} pending</p>
                   </div>
                   <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Customers</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalUsers}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2">{summary.totalUsers ?? 0}</p>
                   </div>
                   <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-5 shadow-sm">
                     <p className="text-xs uppercase text-gray-500">Total Products</p>
@@ -1099,7 +1133,7 @@ const AdminDashboard = () => {
 
       case 'products': {
         // Filter by subcategory if selected
-        let filteredProducts = products;
+        let filteredProducts = products || [];
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
             const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
@@ -1480,14 +1514,51 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                  <input
-                    name="brand"
-                    value={productForm.brand}
-                    onChange={handleProductFormChange}
-                    required
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Subcategory"
-                  />
+                  {isCustomBrand ? (
+                    <div className="flex gap-2">
+                      <input
+                        name="brand"
+                        value={productForm.brand}
+                        onChange={handleProductFormChange}
+                        required
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                        placeholder="Enter new subcategory"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setIsCustomBrand(false); setProductForm((prev) => ({ ...prev, brand: '' })); }}
+                        className="px-3 py-2 text-xs font-medium border rounded-lg text-gray-600 hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      name="brand"
+                      value={productForm.brand}
+                      onChange={(e) => {
+                        if (e.target.value === '__add_new__') {
+                          setIsCustomBrand(true);
+                          setProductForm((prev) => ({ ...prev, brand: '' }));
+                        } else {
+                          handleProductFormChange(e);
+                        }
+                      }}
+                      required
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      disabled={!productForm.category}
+                    >
+                      <option value="">{productForm.category ? 'Select Subcategory' : 'Select Category First'}</option>
+                      {availableBrands.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                      <option value="__add_new__">+ Add New Subcategory</option>
+                    </select>
+                  )}
+                  {productForm.category && availableBrands.length === 0 && !isCustomBrand && (
+                    <p className="text-xs text-gray-500 mt-1">No existing subcategories. Select "+ Add New" to create one.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
@@ -1680,11 +1751,11 @@ const AdminDashboard = () => {
                         className="w-28 border rounded-lg px-3 py-2 text-sm"
                         placeholder="Price (₹)"
                       />
-                      {productForm.boxOptions.length > 1 && (
+                      {(productForm.boxOptions || []).length > 1 && (
                         <button
                           type="button"
                           onClick={() => {
-                            const updated = productForm.boxOptions.filter((_, i) => i !== idx);
+                            const updated = (productForm.boxOptions || []).filter((_, i) => i !== idx);
                             setProductForm((prev) => ({ ...prev, boxOptions: updated }));
                           }}
                           className="text-red-500 hover:text-red-700 p-1"
@@ -2000,13 +2071,53 @@ const AdminDashboard = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
-                    <input
-                      name="brand"
-                      value={productForm.brand}
-                      onChange={handleProductFormChange}
-                      required
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    />
+                    {isCustomBrand ? (
+                      <div className="flex gap-2">
+                        <input
+                          name="brand"
+                          value={productForm.brand}
+                          onChange={handleProductFormChange}
+                          required
+                          className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                          placeholder="Enter new subcategory"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setIsCustomBrand(false); setProductForm((prev) => ({ ...prev, brand: '' })); }}
+                          className="px-3 py-2 text-xs font-medium border rounded-lg text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        name="brand"
+                        value={availableBrands.includes(productForm.brand) ? productForm.brand : (productForm.brand ? '__custom_existing__' : '')}
+                        onChange={(e) => {
+                          if (e.target.value === '__add_new__') {
+                            setIsCustomBrand(true);
+                            setProductForm((prev) => ({ ...prev, brand: '' }));
+                          } else if (e.target.value === '__custom_existing__') {
+                            // Keep existing custom value
+                          } else {
+                            handleProductFormChange(e);
+                          }
+                        }}
+                        required
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        disabled={!productForm.category}
+                      >
+                        <option value="">{productForm.category ? 'Select Subcategory' : 'Select Category First'}</option>
+                        {productForm.brand && !availableBrands.includes(productForm.brand) && (
+                          <option value="__custom_existing__">{productForm.brand} (current)</option>
+                        )}
+                        {availableBrands.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                        <option value="__add_new__">+ Add New Subcategory</option>
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
@@ -2198,11 +2309,11 @@ const AdminDashboard = () => {
                           className="w-28 border rounded-lg px-3 py-2 text-sm"
                           placeholder="Price (₹)"
                         />
-                        {productForm.boxOptions.length > 1 && (
+                        {(productForm.boxOptions || []).length > 1 && (
                           <button
                             type="button"
                             onClick={() => {
-                              const updated = productForm.boxOptions.filter((_, i) => i !== idx);
+                              const updated = (productForm.boxOptions || []).filter((_, i) => i !== idx);
                               setProductForm((prev) => ({ ...prev, boxOptions: updated }));
                             }}
                             className="text-red-500 hover:text-red-700 p-1"
@@ -2444,7 +2555,7 @@ const AdminDashboard = () => {
               <>
                 {loading ? (
                   <p className="text-sm text-gray-500">Loading products...</p>
-                ) : products.length === 0 ? (
+                ) : (products || []).length === 0 ? (
                   <p className="text-sm text-gray-500">No products in this category yet.</p>
                 ) : (
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2550,7 +2661,7 @@ const AdminDashboard = () => {
             </div>
             {loading ? (
               <p className="text-sm text-gray-500">Loading products...</p>
-            ) : products.length === 0 ? (
+            ) : (products || []).length === 0 ? (
               <p className="text-sm text-gray-500">No products in this category yet.</p>
             ) : (
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2788,9 +2899,9 @@ const AdminDashboard = () => {
             </form>
 
             {/* Reels List */}
-            {loading && !reels.length ? (
+            {loading && !(reels || []).length ? (
               <p className="text-sm text-gray-500">Loading reels...</p>
-            ) : reels.length === 0 ? (
+            ) : (reels || []).length === 0 ? (
               <p className="text-sm text-gray-500">No reels added yet.</p>
             ) : (
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2923,7 +3034,7 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Current categories</h3>
               {loading ? (
                 <p className="text-sm text-gray-500">Loading...</p>
-              ) : navCategories.length === 0 ? (
+              ) : (navCategories || []).length === 0 ? (
                 <p className="text-sm text-gray-500">No categories yet. Add one above.</p>
               ) : (
                 <ul className="space-y-3">
@@ -2972,7 +3083,7 @@ const AdminDashboard = () => {
                 Refresh
               </button>
             </div>
-            {orders.length === 0 ? (
+            {(orders || []).length === 0 ? (
               <div className="bg-white border p-12 text-center">
                 <p className="text-gray-500 text-sm">No orders yet</p>
               </div>
@@ -3155,7 +3266,7 @@ const AdminDashboard = () => {
                 Refresh
               </button>
             </div>
-            {orders.length === 0 ? (
+            {(orders || []).length === 0 ? (
               <div className="bg-white border p-12 text-center">
                 <p className="text-gray-500 text-sm">No orders yet</p>
               </div>
@@ -3268,7 +3379,7 @@ const AdminDashboard = () => {
               <div className="bg-white border p-12 text-center">
                 <p className="text-gray-500 text-sm">Loading users...</p>
               </div>
-            ) : users.length === 0 ? (
+            ) : (users || []).length === 0 ? (
               <div className="bg-white border p-12 text-center">
                 <p className="text-gray-500 text-sm">No users found</p>
               </div>
@@ -3553,7 +3664,7 @@ const AdminDashboard = () => {
             {/* Coupons List */}
             <div className="bg-white rounded-2xl border border-[#E8E4DD] shadow-sm overflow-hidden">
               <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">All Coupons ({coupons.length})</h3>
+                <h3 className="text-lg font-semibold text-gray-900">All Coupons ({(coupons || []).length})</h3>
                 <button onClick={fetchCoupons} className="text-sm text-gray-600 hover:text-gray-900 font-medium">
                   Refresh
                 </button>
@@ -3561,7 +3672,7 @@ const AdminDashboard = () => {
 
               {loadingCoupons ? (
                 <div className="p-8 text-center text-gray-500">Loading coupons...</div>
-              ) : coupons.length === 0 ? (
+              ) : (coupons || []).length === 0 ? (
                 <div className="p-8 text-center text-gray-500">No coupons created yet.</div>
               ) : (
                 <div className="overflow-x-auto">
@@ -3761,6 +3872,39 @@ const AdminDashboard = () => {
           {renderContent()}
         </div>
       </main>
+
+      {/* Success Popup */}
+      {successPopup.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-[90%] text-center transform animate-popup">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+              <svg className="w-9 h-9 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">Success!</h3>
+            <p className="text-gray-600 text-sm">{successPopup.text}</p>
+            <button
+              onClick={() => setSuccessPopup({ show: false, text: '' })}
+              className="mt-5 px-6 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      <style>{`
+        @keyframes popupIn {
+          0% { opacity: 0; transform: scale(0.8); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        .animate-popup { animation: popupIn 0.3s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+      `}</style>
     </div>
   );
 };
