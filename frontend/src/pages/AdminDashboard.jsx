@@ -1561,35 +1561,12 @@ const AdminDashboard = () => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
-                  <input
-                    name="price"
-                    type="number"
-                    min="0"
-                    value={productForm.price}
-                    onChange={handleProductFormChange}
-                    required
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Original Price (₹)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">MRP Price (₹)</label>
                   <input
                     name="originalPrice"
-                    type="number"
+                    type="text" inputMode="numeric"
                     min="0"
                     value={productForm.originalPrice}
-                    onChange={handleProductFormChange}
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                  <input
-                    name="stock"
-                    type="number"
-                    min="0"
-                    value={productForm.stock}
                     onChange={handleProductFormChange}
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
@@ -1598,7 +1575,7 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label>
                   <input
                     name="discountPercent"
-                    type="number"
+                    type="text" inputMode="numeric"
                     min="0"
                     max="100"
                     value={productForm.discountPercent}
@@ -1607,6 +1584,29 @@ const AdminDashboard = () => {
                   />
                   <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Final Price (₹)</label>
+                  <input
+                    name="price"
+                    type="text" inputMode="numeric"
+                    min="0"
+                    value={productForm.price}
+                    onChange={handleProductFormChange}
+                    required
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                  <input
+                    name="stock"
+                    type="text" inputMode="numeric"
+                    min="0"
+                    value={productForm.stock}
+                    onChange={handleProductFormChange}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
               {/* Page Position Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1614,7 +1614,7 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">All Page Position No.</label>
                   <input
                     name="pageNumberAll"
-                    type="number"
+                    type="text" inputMode="numeric"
                     min="0"
                     value={productForm.pageNumberAll}
                     onChange={handleProductFormChange}
@@ -1627,7 +1627,7 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category Page Position No.</label>
                   <input
                     name="pageNumberCategory"
-                    type="number"
+                    type="text" inputMode="numeric"
                     min="0"
                     value={productForm.pageNumberCategory}
                     onChange={handleProductFormChange}
@@ -1740,7 +1740,7 @@ const AdminDashboard = () => {
                         placeholder="Box name (e.g. Regular Box)"
                       />
                       <input
-                        type="number"
+                        type="text" inputMode="numeric"
                         min="0"
                         value={boxOpt.price}
                         onChange={(e) => {
@@ -2120,35 +2120,12 @@ const AdminDashboard = () => {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
-                    <input
-                      name="price"
-                      type="number"
-                      min="0"
-                      value={productForm.price}
-                      onChange={handleProductFormChange}
-                      required
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Original Price (₹)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">MRP Price (₹)</label>
                     <input
                       name="originalPrice"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       value={productForm.originalPrice}
-                      onChange={handleProductFormChange}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
-                    <input
-                      name="stock"
-                      type="number"
-                      min="0"
-                      value={productForm.stock}
                       onChange={handleProductFormChange}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                     />
@@ -2157,7 +2134,7 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label>
                     <input
                       name="discountPercent"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       max="100"
                       value={productForm.discountPercent}
@@ -2166,6 +2143,29 @@ const AdminDashboard = () => {
                     />
                     <p className="text-xs text-gray-500 mt-1">Enter Discount % to auto-calculate Price, or enter Price to auto-calculate Discount %</p>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Final Price (₹)</label>
+                    <input
+                      name="price"
+                      type="text" inputMode="numeric"
+                      min="0"
+                      value={productForm.price}
+                      onChange={handleProductFormChange}
+                      required
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                    <input
+                      name="stock"
+                      type="text" inputMode="numeric"
+                      min="0"
+                      value={productForm.stock}
+                      onChange={handleProductFormChange}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
                 </div>
                 {/* Page Position Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2173,7 +2173,7 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">All Page Position No.</label>
                     <input
                       name="pageNumberAll"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       value={productForm.pageNumberAll}
                       onChange={handleProductFormChange}
@@ -2186,7 +2186,7 @@ const AdminDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category Page Position No.</label>
                     <input
                       name="pageNumberCategory"
-                      type="number"
+                      type="text" inputMode="numeric"
                       min="0"
                       value={productForm.pageNumberCategory}
                       onChange={handleProductFormChange}
@@ -2298,7 +2298,7 @@ const AdminDashboard = () => {
                           placeholder="Box name (e.g. Regular Box)"
                         />
                         <input
-                          type="number"
+                          type="text" inputMode="numeric"
                           min="0"
                           value={boxOpt.price}
                           onChange={(e) => {
@@ -2858,7 +2858,7 @@ const AdminDashboard = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
                   <input
-                    type="number"
+                    type="text" inputMode="numeric"
                     name="order"
                     value={reelForm.order}
                     onChange={handleReelFormChange}
@@ -3538,7 +3538,7 @@ const AdminDashboard = () => {
                       Discount Value * {couponForm.discountType === 'percentage' ? '(%)' : '(₹)'}
                     </label>
                     <input
-                      type="number"
+                      type="text" inputMode="numeric"
                       value={couponForm.discountValue}
                       onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })}
                       placeholder={couponForm.discountType === 'percentage' ? 'e.g. 20' : 'e.g. 200'}
@@ -3552,7 +3552,7 @@ const AdminDashboard = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Min Order Amount (₹)</label>
                     <input
-                      type="number"
+                      type="text" inputMode="numeric"
                       value={couponForm.minOrderAmount}
                       onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: e.target.value })}
                       placeholder="e.g. 500"
@@ -3566,7 +3566,7 @@ const AdminDashboard = () => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Max Discount Cap (₹)</label>
                       <input
-                        type="number"
+                        type="text" inputMode="numeric"
                         value={couponForm.maxDiscount}
                         onChange={(e) => setCouponForm({ ...couponForm, maxDiscount: e.target.value })}
                         placeholder="e.g. 500 (leave empty for no cap)"
@@ -3580,7 +3580,7 @@ const AdminDashboard = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Total Usage Limit</label>
                     <input
-                      type="number"
+                      type="text" inputMode="numeric"
                       value={couponForm.usageLimit}
                       onChange={(e) => setCouponForm({ ...couponForm, usageLimit: e.target.value })}
                       placeholder="Leave empty for unlimited"
@@ -3593,7 +3593,7 @@ const AdminDashboard = () => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Per User Limit</label>
                     <input
-                      type="number"
+                      type="text" inputMode="numeric"
                       value={couponForm.perUserLimit}
                       onChange={(e) => setCouponForm({ ...couponForm, perUserLimit: e.target.value })}
                       placeholder="1"
