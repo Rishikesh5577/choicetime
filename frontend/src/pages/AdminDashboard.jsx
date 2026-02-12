@@ -1520,7 +1520,6 @@ const AdminDashboard = () => {
                         name="brand"
                         value={productForm.brand}
                         onChange={handleProductFormChange}
-                        required
                         className="flex-1 border rounded-lg px-3 py-2 text-sm"
                         placeholder="Enter new subcategory"
                         autoFocus
@@ -1545,7 +1544,6 @@ const AdminDashboard = () => {
                           handleProductFormChange(e);
                         }
                       }}
-                      required
                       className="w-full border rounded-lg px-3 py-2 text-sm"
                       disabled={!productForm.category}
                     >
@@ -2077,7 +2075,6 @@ const AdminDashboard = () => {
                           name="brand"
                           value={productForm.brand}
                           onChange={handleProductFormChange}
-                          required
                           className="flex-1 border rounded-lg px-3 py-2 text-sm"
                           placeholder="Enter new subcategory"
                           autoFocus
@@ -2104,7 +2101,6 @@ const AdminDashboard = () => {
                             handleProductFormChange(e);
                           }
                         }}
-                        required
                         className="w-full border rounded-lg px-3 py-2 text-sm"
                         disabled={!productForm.category}
                       >
