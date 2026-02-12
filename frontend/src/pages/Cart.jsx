@@ -241,7 +241,7 @@ const Cart = () => {
                     : product.image || product.thumbnail || '';
 
                   // Normalize price
-                  const productPrice = product.finalPrice || product.price || 0;
+                  const productPrice = product.price || product.finalPrice || 0;
                   const boxPrice = Number(item.boxPrice) || 0;
                   const itemUnitPrice = productPrice + boxPrice;
 

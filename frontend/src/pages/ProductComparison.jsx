@@ -127,8 +127,8 @@ const ProductComparison = () => {
                 {products.map((product) => (
                   <td key={product._id || product.id} className="px-4 py-3">
                     <div className="text-sm">
-                      <span className="font-bold text-gray-900">₹{(product.finalPrice || product.price).toLocaleString()}</span>
-                      {product.originalPrice && product.originalPrice > (product.finalPrice || product.price) && (
+                      <span className="font-bold text-gray-900">₹{(product.price || product.finalPrice).toLocaleString()}</span>
+                      {product.originalPrice && product.originalPrice > (product.price || product.finalPrice) && (
                         <span className="text-gray-500 line-through ml-2">₹{product.originalPrice.toLocaleString()}</span>
                       )}
                     </div>

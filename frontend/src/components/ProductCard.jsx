@@ -49,9 +49,10 @@ const ProductCard = ({ product }) => {
   const isWatch = (product.category || '').toLowerCase().includes('watch');
   const isLens = (product.category || '').toLowerCase().includes('lens');
   const sizes = isWatch ? [] : (product.sizes || ['S', 'M', 'L', 'XL']); 
-  const finalPrice = product.finalPrice || product.price || product.mrp || 0;
-  const originalPrice = product.originalPrice || product.mrp || product.price || 0;
-  const hasDiscount = originalPrice > finalPrice && finalPrice > 0;
+  // Use price (admin's selling price) first, fallback to finalPrice
+  const finalPrice = product.price || product.finalPrice || product.mrp || 0;
+  const originalPrice = product.originalPrice || product.mrp || 0;
+  const hasDiscount = originalPrice > 0 && originalPrice > finalPrice && finalPrice > 0;
   const productId = product._id || product.id;
   
   // Get the image source with fallback
@@ -117,8 +118,10 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Calculate discount percentage
-  const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
+  // Use stored discount % from admin directly, fallback to calculation
+  const discountPercent = product.discountPercent > 0
+    ? product.discountPercent
+    : (hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0);
 
   return (
     <>

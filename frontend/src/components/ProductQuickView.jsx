@@ -65,8 +65,8 @@ const ProductQuickView = ({ product, isOpen, onClose }) => {
     }
   };
 
-  const price = product.finalPrice || product.price;
-  const originalPrice = product.originalPrice || product.mrp || product.price;
+  const price = product.price || product.finalPrice;
+  const originalPrice = product.originalPrice || product.mrp || 0;
   const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
   return (

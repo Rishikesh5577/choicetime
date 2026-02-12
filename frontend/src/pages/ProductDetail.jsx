@@ -242,7 +242,7 @@ const ProductDetail = () => {
         id: p._id || p.id,
         images: p.images || [p.image || p.thumbnail],
         image: p.images?.[0] || p.image || p.thumbnail,
-        price: p.finalPrice || p.price,
+        price: p.price || p.finalPrice,
         originalPrice: p.originalPrice || p.mrp || p.price,
       }));
 
@@ -334,7 +334,7 @@ const ProductDetail = () => {
         id: p._id || p.id,
         images: p.images || [p.image || p.thumbnail],
         image: p.images?.[0] || p.image || p.thumbnail,
-        price: p.finalPrice || p.price,
+        price: p.price || p.finalPrice,
         originalPrice: p.originalPrice || p.mrp || p.price,
       }));
 
@@ -515,9 +515,9 @@ const ProductDetail = () => {
         const productId = p._id || p.id;
         if (productId === currentProductId) return false;
 
-        const finalPrice = p.finalPrice || p.price;
-        const originalPrice = p.originalPrice || p.mrp || p.price;
-        const hasDiscount = originalPrice > finalPrice;
+        const finalPrice = p.price || p.finalPrice;
+        const originalPrice = p.originalPrice || p.mrp || 0;
+        const hasDiscount = originalPrice > 0 && originalPrice > finalPrice;
         const discountPercent = p.discountPercent || (hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0);
 
         return p.onSale === true || hasDiscount || discountPercent > 0;
@@ -542,7 +542,7 @@ const ProductDetail = () => {
         id: p._id || p.id,
         images: p.images || [p.image || p.thumbnail],
         image: p.images?.[0] || p.image || p.thumbnail,
-        price: p.finalPrice || p.price,
+        price: p.price || p.finalPrice,
         originalPrice: p.originalPrice || p.mrp || p.price,
       }));
 
@@ -705,8 +705,8 @@ const ProductDetail = () => {
   if (!product) return <NotFoundState />;
 
   const productImages = product.images || [product.image || product.thumbnail];
-  const finalPrice = product.finalPrice || product.price;
-  const originalPrice = product.originalPrice || product.mrp || product.price;
+  const finalPrice = product.price || product.finalPrice;
+  const originalPrice = product.originalPrice || product.mrp || 0;
 
   // Split product name for highlighting
   const nameWords = product.name.split(' ');
@@ -931,11 +931,11 @@ const ProductDetail = () => {
                 {selectedBoxPrice > 0 && (
                   <span className="text-xs text-gray-500">(₹{finalPrice.toLocaleString()} + ₹{selectedBoxPrice} box)</span>
                 )}
-                {originalPrice > finalPrice && (
+                {originalPrice > 0 && originalPrice > finalPrice && (
                   <>
                     <span className="text-sm sm:text-base text-gray-400 line-through">₹{originalPrice.toLocaleString()}</span>
                     <span className="text-[11px] sm:text-xs font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                      {Math.round(((originalPrice - finalPrice) / originalPrice) * 100)}% OFF
+                      {product.discountPercent > 0 ? product.discountPercent : Math.round(((originalPrice - finalPrice) / originalPrice) * 100)}% OFF
                     </span>
                   </>
                 )}

@@ -165,7 +165,7 @@ const Wishlist = () => {
         {products.map((product) => {
           const pid = product._id || product.id;
           const productImage = product.images?.[0] || product.image || product.thumbnail || '';
-          const finalPrice = product.finalPrice || product.price || 0;
+          const finalPrice = product.price || product.finalPrice || 0;
           const originalPrice = product.originalPrice || product.mrp || product.price || 0;
           const discount = originalPrice > finalPrice ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
           const isRemoving = removingId === pid;

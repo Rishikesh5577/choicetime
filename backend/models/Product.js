@@ -61,11 +61,9 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.pre('save', function (next) {
-  if (this.discountPercent > 0 && this.price) {
-    this.finalPrice = this.price - (this.price * this.discountPercent) / 100;
-  } else {
-    this.finalPrice = this.price;
-  }
+  // finalPrice = the selling price entered by admin (price field)
+  // No need to recalculate — admin already sets the correct selling price
+  this.finalPrice = this.price;
   this.inStock = (this.stock || 0) > 0;
   next();
 });

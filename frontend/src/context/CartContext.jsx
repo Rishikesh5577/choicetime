@@ -106,7 +106,7 @@ export const CartProvider = ({ children }) => {
   const getCartTotal = () => {
     return cart.reduce((total, item) => {
       const product = item.product || item;
-      const price = product.finalPrice || product.price || 0;
+      const price = product.price || product.finalPrice || 0;
       const boxPrice = Number(item.boxPrice) || 0;
       return total + (price + boxPrice) * item.quantity;
     }, 0);

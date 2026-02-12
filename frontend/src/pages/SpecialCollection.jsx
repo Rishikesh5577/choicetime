@@ -81,7 +81,7 @@ const SpecialCollection = ({ type }) => {
 
     if (filters.priceRange) {
       filtered = filtered.filter((product) => {
-        const price = product.finalPrice || product.price;
+        const price = product.price || product.finalPrice;
         const { min, max } = filters.priceRange;
         return price >= min && (max === Infinity || price <= max);
       });
@@ -214,7 +214,7 @@ const SpecialCollection = ({ type }) => {
       id: product._id || product.id,
       images,
       image: firstImage,
-      price: product.finalPrice || product.price,
+      price: product.price || product.finalPrice,
       originalPrice: product.originalPrice || product.mrp || product.price,
       rating: product.rating || 0,
       reviews: product.reviewsCount || product.reviews || 0,
