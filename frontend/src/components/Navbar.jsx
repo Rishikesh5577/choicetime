@@ -158,7 +158,7 @@ const Navbar = () => {
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 py-0.5">
             <div className="relative flex items-center justify-between h-12 md:h-16">
 
-              {/* LEFT: Home + Sale */}
+              {/* LEFT: Home */}
               <div className="hidden md:flex items-center gap-6">
                 <Link
                   to="/"
@@ -166,13 +166,6 @@ const Navbar = () => {
                   ${activeCategory === 'home' ? 'text-black' : 'text-gray-500 hover:text-black'}`}
                 >
                   Home
-                </Link>
-                <Link
-                  to="/sale"
-                  className={`text-xs font-semibold uppercase tracking-wider transition-colors
-                  ${activeCategory === 'sale' ? 'text-red-600' : 'text-red-500 hover:text-red-600'}`}
-                >
-                  Sale
                 </Link>
               </div>
 
@@ -326,13 +319,6 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/sale"
-                className={`flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-full transition-all
-                ${activeCategory === 'sale' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600'}`}
-              >
-                Sale
-              </Link>
             </div>
           </div>
         </nav>
@@ -495,7 +481,6 @@ const Navbar = () => {
             {/* Main Links */}
             <div className="space-y-4">
               <Link to="/" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-              <Link to="/new-arrival" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => setIsMobileMenuOpen(false)}>New Arrivals</Link>
               <Link to="/wishlist" className="block text-2xl font-light tracking-tight text-gray-900 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
                 Wishlist
                 {getWishlistCount() > 0 && (
@@ -504,7 +489,6 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
-              <Link to="/sale" className="block text-2xl font-bold tracking-tight text-red-600" onClick={() => setIsMobileMenuOpen(false)}>Sale</Link>
             </div>
 
             <div className="w-12 h-px bg-gray-200"></div>

@@ -177,7 +177,7 @@ const InstagramReels = () => {
   if (loading) {
     return (
       <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto px-2 sm:px-3">
           <div className="text-center mb-8 md:mb-10">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
               Trending Reels
@@ -198,7 +198,7 @@ const InstagramReels = () => {
 
   return (
     <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-3">
         {/* Section Header */}
         <div className="text-center mb-8 md:mb-10">
           <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
