@@ -206,6 +206,11 @@ const ContactUs = () => {
             </div>
           </div>
         </div>
+
+        <p className="mt-12 pt-8 text-center text-sm text-gray-500 border-t border-gray-200">
+          Website developed by developer Sumit Bolla.{' '}
+          <a href="tel:9527352323" className="text-gray-700 hover:text-gray-900 font-medium">9527352323</a>
+        </p>
       </div>
     </div>
   );
