@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { productAPI } from '../utils/api';
+import { productAPI, categoriesAPI } from '../utils/api';
 
 // --- Home Page Section Components ---
 import HeroCarousel from '../components/home/HeroCarousel';
@@ -10,82 +10,17 @@ import ProductSection from '../components/home/ProductSection';
 import InstagramReels from '../components/InstagramReels';
 import FAQSection from '../components/home/FAQSection';
 
-// --- API FETCH FUNCTIONS ---
-const fetchFreshDrops = async () => {
+const HOME_CACHE_KEY = 'homePage_topSelling';
+const HOME_CACHE_TIME_KEY = 'homePage_topSelling_timestamp';
+const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+
+/** Fetch top-selling products (limit 8) for a single category */
+const fetchTopSellingForCategory = async (categorySlug) => {
   try {
-    const [menShoes, womenShoes, accessories, watches, lenses, mensLenses] = await Promise.all([
-      productAPI.getMenItems({ limit: 10, category: 'shoes' }),
-      productAPI.getWomenItems({ limit: 10, category: 'shoes' }),
-      productAPI.getAccessories({ limit: 10 }),
-      productAPI.getWatches({ limit: 10 }),
-      productAPI.getLenses({ limit: 10 }),
-      productAPI.getLenses({ limit: 10, gender: 'men' })
-    ]);
-
-    let allShoes = [];
-    if (menShoes.success && menShoes.data.products) {
-      allShoes = [...allShoes, ...menShoes.data.products];
-    }
-    if (womenShoes.success && womenShoes.data.products) {
-      allShoes = [...allShoes, ...womenShoes.data.products];
-    }
-    const shoes = allShoes.slice(0, 12);
-
-    const acc = accessories.success && accessories.data.products
-      ? accessories.data.products.slice(0, 10)
-      : [];
-
-    const watch = watches.success && watches.data.products
-      ? watches.data.products.slice(0, 10)
-      : [];
-
-    const lens = lenses.success && lenses.data.products
-      ? lenses.data.products.slice(0, 10)
-      : [];
-
-    const mensLens = mensLenses.success && mensLenses.data.products
-      ? mensLenses.data.products.slice(0, 10)
-      : [];
-
-    return [...shoes, ...acc, ...watch, ...lens, ...mensLens];
+    const res = await productAPI.getProducts(categorySlug, { limit: 8 });
+    return res.success && res.data?.products ? res.data.products : [];
   } catch (error) {
-    console.error("Error fetching fresh drops:", error);
-    return [];
-  }
-};
-
-const fetchSaleItems = async () => {
-  const res = await productAPI.getAllProducts({ limit: 4, onSale: true, sort: 'discountPercent', order: 'desc' });
-  return res.success ? res.data.products : [];
-};
-
-const fetchMen = async () => {
-  const res = await productAPI.getMenItems({ limit: 4 });
-  return res.success ? res.data.products : [];
-};
-
-const fetchWomen = async () => {
-  const res = await productAPI.getWomenItems({ limit: 4 });
-  return res.success ? res.data.products : [];
-};
-
-const fetchWatches = async () => {
-  const res = await productAPI.getWatches({ limit: 4 });
-  return res.success ? res.data.products : [];
-};
-
-const fetchAccessories = async () => {
-  try {
-    const [lenses, acc] = await Promise.all([
-      productAPI.getLenses({ limit: 2 }),
-      productAPI.getAccessories({ limit: 2 })
-    ]);
-    let combined = [];
-    if (lenses.success) combined = [...combined, ...lenses.data.products];
-    if (acc.success) combined = [...combined, ...acc.data.products];
-    return combined.slice(0, 4);
-  } catch (error) {
-    console.error("Error fetching accessories:", error);
+    console.error(`Error fetching top selling for ${categorySlug}:`, error);
     return [];
   }
 };
@@ -93,31 +28,51 @@ const fetchAccessories = async () => {
 // --- MAIN HOME COMPONENT ---
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [freshDrops, setFreshDrops] = useState([]);
-  const [saleItems, setSaleItems] = useState([]);
-  const [menItems, setMenItems] = useState([]);
-  const [womenItems, setWomenItems] = useState([]);
-  const [watches, setWatches] = useState([]);
-  const [accessories, setAccessories] = useState([]);
+  const [topSellingByCategory, setTopSellingByCategory] = useState([]);
 
   useEffect(() => {
     const loadAllData = async () => {
       setIsLoading(true);
-      try {
-        const [freshDropsData, saleData, menData, womenData, watchesData, accessoriesData] = await Promise.all([
-          fetchFreshDrops(), fetchSaleItems(), fetchMen(), fetchWomen(), fetchWatches(), fetchAccessories()
-        ]);
-        setFreshDrops(freshDropsData);
-        setSaleItems(saleData);
-        setMenItems(menData);
-        setWomenItems(womenData);
-        setWatches(watchesData);
-        setAccessories(accessoriesData);
-      } catch (error) {
-        console.error("Error loading home page data:", error);
-      } finally {
-        setIsLoading(false);
+      let data = null;
+      const now = Date.now();
+      const cached = localStorage.getItem(HOME_CACHE_KEY);
+      const cachedTime = localStorage.getItem(HOME_CACHE_TIME_KEY);
+      if (cached && cachedTime) {
+        const age = now - parseInt(cachedTime, 10);
+        if (age < CACHE_DURATION_MS) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && Array.isArray(parsed)) data = parsed;
+          } catch (e) {
+            console.error('Error reading home page cache:', e);
+          }
+        }
       }
+      if (data === null) {
+        try {
+          const categoriesRes = await categoriesAPI.getCategories();
+          const cats = categoriesRes?.success && categoriesRes?.data?.categories?.length
+            ? categoriesRes.data.categories
+            : [];
+          data = await Promise.all(
+            cats.map(async (cat) => {
+              const products = await fetchTopSellingForCategory(cat.id);
+              return { category: cat, products };
+            })
+          );
+          try {
+            localStorage.setItem(HOME_CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(HOME_CACHE_TIME_KEY, Date.now().toString());
+          } catch (e) {
+            console.error('Error saving home page cache:', e);
+          }
+        } catch (error) {
+          console.error("Error loading home page data:", error);
+          data = [];
+        }
+      }
+      setTopSellingByCategory(data || []);
+      setIsLoading(false);
     };
     loadAllData();
   }, []);
@@ -140,14 +95,17 @@ const Home = () => {
       {/* Instagram / Trending Reels */}
       <InstagramReels />
 
-      {/* Latest Products */}
-      <ProductSection
-        title="Latest Products"
-        subtitle="Discover our newest arrivals"
-        products={freshDrops}
-        viewAllLink="/sale"
-        isLoading={isLoading}
-      />
+      {/* One Top Selling section per category */}
+      {topSellingByCategory.map(({ category, products }) => (
+        <ProductSection
+          key={category.id}
+          title={`${category.label} - Top Selling`}
+          subtitle="Best sellers in this category"
+          products={products}
+          viewAllLink={category.path}
+          isLoading={false}
+        />
+      ))}
 
       {/* Frequently Asked Questions */}
       <FAQSection />

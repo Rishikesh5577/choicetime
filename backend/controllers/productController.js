@@ -6,7 +6,7 @@ import Product from '../models/Product.js';
  */
 export const getProducts = async (req, res) => {
   try {
-    const { category, subCategory, gender, limit = 500, search, isNewArrival, onSale } = req.query;
+    const { category, subCategory, gender, limit = 500, search, isNewArrival, onSale, sort: sortParam, order: orderParam } = req.query;
     const query = {};
 
     if (category) {
@@ -35,10 +35,17 @@ export const getProducts = async (req, res) => {
     }
 
     const limitNum = Math.min(parseInt(limit, 10) || 500, 1000);
-    // Sort by page position (lower number = higher priority), then by updatedAt
-    const sortField = category ? 'pageNumberCategory' : 'pageNumberAll';
+    const orderVal = orderParam === 'asc' ? 1 : -1;
+    // When sort=updatedAt or sort=createdAt, use that for "latest first" (e.g. home Latest Products)
+    let sortOption = {};
+    if (sortParam === 'updatedAt' || sortParam === 'createdAt') {
+      sortOption = { [sortParam]: orderVal };
+    } else {
+      const sortField = category ? 'pageNumberCategory' : 'pageNumberAll';
+      sortOption = { [sortField]: 1, updatedAt: -1 };
+    }
     const products = await Product.find(query)
-      .sort({ [sortField]: 1, updatedAt: -1 })
+      .sort(sortOption)
       .limit(limitNum)
       .lean();
 

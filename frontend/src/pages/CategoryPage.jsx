@@ -83,36 +83,7 @@ const CategoryPage = () => {
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      
-      // Create cache key based on category and subcategory
-      const cacheKey = `products_${slug}_${subCategoryParam || 'all'}`;
-      const cacheTimeKey = `${cacheKey}_timestamp`;
-      const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
-      
-      // Check if we have cached data
-      const cachedData = localStorage.getItem(cacheKey);
-      const cacheTimestamp = localStorage.getItem(cacheTimeKey);
-      
-      if (cachedData && cacheTimestamp) {
-        const now = Date.now();
-        const cacheAge = now - parseInt(cacheTimestamp, 10);
-        
-        // Use cached data if it's less than 10 minutes old
-        if (cacheAge < CACHE_DURATION) {
-          try {
-            const parsedCache = JSON.parse(cachedData);
-            if (parsedCache && Array.isArray(parsedCache) && parsedCache.length > 0) {
-              setAllProducts(parsedCache);
-              setIsLoading(false);
-              return; // Exit early, using cached data
-            }
-          } catch (e) {
-            console.error('Error parsing cached products:', e);
-          }
-        }
-      }
-      
-      // Fetch from API if no valid cache
+
       const params = { limit: 1000 };
       if (slug) params.category = slug;
       if (subCategoryParam) params.subCategory = subCategoryParam;
@@ -128,14 +99,6 @@ const CategoryPage = () => {
           });
         }
         setAllProducts(productsList);
-        
-        // Cache the products for future use
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify(productsList));
-          localStorage.setItem(cacheTimeKey, Date.now().toString());
-        } catch (e) {
-          console.error('Error caching products:', e);
-        }
       } else {
         setAllProducts([]);
       }

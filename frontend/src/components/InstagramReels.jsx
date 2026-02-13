@@ -1,12 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
 import { reelAPI } from '../utils/api';
 
-// Individual Video Reel Component
-const VideoReel = ({ reel }) => {
+// Lazy-load video only when this reel card is in viewport (reduces initial load and fixes display issues)
+// isActive = only this reel is allowed to play; onPlayRequest = notify parent when user wants to play (so others can be paused)
+const VideoReel = ({ reel, isActive, onPlayRequest }) => {
   const videoRef = useRef(null);
+  const cardRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setIsInView(true);
+      },
+      { rootMargin: '100px', threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // When another reel is selected to play, pause this one
+  useEffect(() => {
+    if (!isActive && videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [isActive]);
 
   const handlePlay = async () => {
     if (videoRef.current) {
@@ -14,7 +38,9 @@ const VideoReel = ({ reel }) => {
         if (isPlaying) {
           videoRef.current.pause();
           setIsPlaying(false);
+          onPlayRequest?.(null);
         } else {
+          onPlayRequest?.(reel._id);
           videoRef.current.muted = true;
           setIsMuted(true);
           await videoRef.current.play();
@@ -36,13 +62,21 @@ const VideoReel = ({ reel }) => {
   };
 
   return (
-    <div className="flex-shrink-0 w-[160px] sm:w-[180px] md:w-[190px]">
+    <div ref={cardRef} className="flex-shrink-0 w-[160px] sm:w-[180px] md:w-[190px]">
       <div className="relative rounded-xl overflow-hidden bg-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 group">
         {/* Video Container - 9:16 aspect ratio */}
         <div className="aspect-[9/16] relative">
           {hasError ? (
             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
               Failed to load
+            </div>
+          ) : !isInView ? (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+              {reel.thumbnailUrl ? (
+                <img src={reel.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="text-gray-400 text-xs">Loading...</div>
+              )}
             </div>
           ) : (
             <video
@@ -52,7 +86,7 @@ const VideoReel = ({ reel }) => {
               loop
               muted={isMuted}
               playsInline
-              preload="auto"
+              preload="metadata"
               poster={reel.thumbnailUrl || undefined}
               onClick={handlePlay}
               onPlay={() => setIsPlaying(true)}
@@ -60,9 +94,9 @@ const VideoReel = ({ reel }) => {
               onError={() => setHasError(true)}
             />
           )}
-          
-          {/* Play Button Overlay */}
-          {!isPlaying && !hasError && (
+
+          {/* Play Button Overlay - only when video is loaded */}
+          {isInView && !isPlaying && !hasError && (
             <div 
               className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
               onClick={handlePlay}
@@ -76,7 +110,7 @@ const VideoReel = ({ reel }) => {
           )}
 
           {/* Pause overlay on hover when playing */}
-          {isPlaying && (
+          {isInView && isPlaying && (
             <div 
               className="absolute inset-0 flex items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
               onClick={handlePlay}
@@ -89,8 +123,8 @@ const VideoReel = ({ reel }) => {
             </div>
           )}
 
-          {/* Mute Button */}
-          {!hasError && (
+          {/* Mute Button - only when video is loaded */}
+          {isInView && !hasError && (
             <button
               onClick={toggleMute}
               className="absolute bottom-10 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10"
@@ -128,41 +162,76 @@ const VideoReel = ({ reel }) => {
   );
 };
 
+const REELS_CACHE_KEY = 'instagramReels';
+const REELS_CACHE_DURATION_MS = 10 * 60 * 1000; // 10 min
+
 const InstagramReels = () => {
   const [reels, setReels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState(null);
+  const [playingReelId, setPlayingReelId] = useState(null);
   const scrollRef = useRef(null);
+  const sectionRef = useRef(null);
 
   useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || hasFetched) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setHasFetched(true);
+      },
+      { rootMargin: '200px', threshold: 0.01 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasFetched]);
+
+  useEffect(() => {
+    if (!hasFetched) return;
+    let cancelled = false;
     const fetchReels = async () => {
+      setLoading(true);
       try {
-        const cached = localStorage.getItem('instagramReels');
-        if (cached) {
+        const now = Date.now();
+        const cached = localStorage.getItem(REELS_CACHE_KEY);
+        const cachedTime = localStorage.getItem(REELS_CACHE_KEY + '_ts');
+        if (cached && cachedTime) {
+          const age = now - parseInt(cachedTime, 10);
+          if (age < REELS_CACHE_DURATION_MS) {
+            try {
+              const parsed = JSON.parse(cached);
+              if (parsed?.reels?.length) {
+                if (!cancelled) setReels(parsed.reels);
+                setLoading(false);
+                return;
+              }
+            } catch (e) {}
+          }
+        }
+        const response = await reelAPI.getReels();
+        if (cancelled) return;
+        if (response.success) {
+          const list = response.data.reels || [];
+          setReels(list);
           try {
-            const parsedCache = JSON.parse(cached);
-            if (parsedCache?.reels?.length) {
-              setReels(parsedCache.reels);
-              setLoading(false);
-            }
+            localStorage.setItem(REELS_CACHE_KEY, JSON.stringify(response.data));
+            localStorage.setItem(REELS_CACHE_KEY + '_ts', Date.now().toString());
           } catch (e) {}
         }
-        
-        const response = await reelAPI.getReels();
-        if (response.success) {
-          setReels(response.data.reels || []);
-          localStorage.setItem('instagramReels', JSON.stringify(response.data));
-        }
       } catch (err) {
-        console.error('Error fetching reels:', err);
-        setError('Failed to load reels');
+        if (!cancelled) {
+          console.error('Error fetching reels:', err);
+          setError('Failed to load reels');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-
     fetchReels();
-  }, []);
+    return () => { cancelled = true; };
+  }, [hasFetched]);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -174,84 +243,73 @@ const InstagramReels = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
-        <div className="max-w-6xl mx-auto px-2 sm:px-3">
-          <div className="text-center mb-8 md:mb-10">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
-              Trending Reels
-            </h2>
-            <div className="mt-2 mx-auto w-12 h-0.5 bg-gray-800 rounded-full"></div>
-          </div>
-          <div className="flex items-center justify-center h-48">
-            <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-300 border-t-gray-800"></div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (error || reels.length === 0) {
-    return null;
-  }
+  const showReels = hasFetched && !error && reels.length > 0;
 
   return (
-    <section className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
+    <section ref={sectionRef} className="pt-2 md:pt-4 pb-10 md:pb-16 bg-[#F7F4EE]">
       <div className="max-w-6xl mx-auto px-2 sm:px-3">
-        {/* Section Header */}
         <div className="text-center mb-8 md:mb-10">
           <h2 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-widest">
             Trending Reels
           </h2>
           <div className="mt-2 mx-auto w-12 h-0.5 bg-gray-800 rounded-full"></div>
-          <p className="text-gray-500 mt-3 text-xs md:text-sm">
-            Watch & shop from{' '}
-            <a 
-              href="https://www.instagram.com/choice_collection_kothrud" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gray-800 font-semibold hover:underline"
-            >
-              @choice_collection_kothrud
-            </a>
-          </p>
+          {showReels && (
+            <p className="text-gray-500 mt-3 text-xs md:text-sm">
+              Watch & shop from{' '}
+              <a 
+                href="https://www.instagram.com/choice_collection_kothrud" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-800 font-semibold hover:underline"
+              >
+                @choice_collection_kothrud
+              </a>
+            </p>
+          )}
         </div>
 
-        {/* Scroll Controls & Reels Container */}
-        <div className="relative group/scroll">
-          {/* Left Arrow */}
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -ml-1 md:-ml-4 opacity-0 group-hover/scroll:opacity-100"
-          >
-            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          {/* Horizontal Scroll Reels */}
-          <div 
-            ref={scrollRef}
-            className="flex gap-3 md:gap-4 overflow-x-auto pb-2 px-1 scroll-smooth"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-          >
-            <style>{`.scroll-smooth::-webkit-scrollbar { display: none; }`}</style>
-            {reels.map((reel) => (
-              <VideoReel key={reel._id} reel={reel} />
-            ))}
+        {!hasFetched && <div className="h-32" aria-hidden="true" />}
+        {hasFetched && loading && (
+          <div className="flex items-center justify-center h-48">
+            <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-300 border-t-gray-800"></div>
           </div>
+        )}
 
-          {/* Right Arrow */}
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -mr-1 md:-mr-4 opacity-0 group-hover/scroll:opacity-100"
-          >
-            <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+        {showReels && (
+          <div className="relative group/scroll">
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -ml-1 md:-ml-4 opacity-0 group-hover/scroll:opacity-100"
+            >
+              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div 
+              ref={scrollRef}
+              className="flex gap-3 md:gap-4 overflow-x-auto pb-2 px-1 scroll-smooth"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+            >
+              <style>{`.scroll-smooth::-webkit-scrollbar { display: none; }`}</style>
+              {reels.map((reel) => (
+                <VideoReel
+                  key={reel._id}
+                  reel={reel}
+                  isActive={playingReelId === reel._id}
+                  onPlayRequest={setPlayingReelId}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-[40%] -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors -mr-1 md:-mr-4 opacity-0 group-hover/scroll:opacity-100"
+            >
+              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
