@@ -136,6 +136,10 @@ const Navbar = () => {
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const toggleMobileAccordion = (id) => {
     setExpandedMobileCategory(expandedMobileCategory === id ? null : id);
   };
@@ -162,6 +166,7 @@ const Navbar = () => {
               <div className="hidden md:flex items-center gap-6">
                 <Link
                   to="/"
+                  onClick={scrollToTop}
                   className={`text-xs font-semibold uppercase tracking-wider transition-colors
                   ${activeCategory === 'home' ? 'text-black' : 'text-gray-500 hover:text-black'}`}
                 >
@@ -171,7 +176,7 @@ const Navbar = () => {
 
               {/* Logo - Left on mobile, Center on desktop */}
               <div className="flex items-center md:absolute md:left-1/2 md:-translate-x-1/2">
-                <Link to="/" className="flex-shrink-0 group relative z-10">
+                <Link to="/" onClick={scrollToTop} className="flex-shrink-0 group relative z-10">
                   <img
                     src="https://res.cloudinary.com/dl6hpq7mm/image/upload/f_auto,q_auto,w_200/v1770185345/image-removebg-preview_2_we5d7r.png"
                     alt="choicetime"
@@ -304,6 +309,7 @@ const Navbar = () => {
             <div className="flex items-center gap-1 px-3 py-2 min-w-max">
               <Link
                 to="/"
+                onClick={scrollToTop}
                 className={`flex-shrink-0 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide rounded-full transition-all
                 ${activeCategory === 'home' ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
               >
@@ -333,7 +339,7 @@ const Navbar = () => {
           <div className="flex justify-around items-start max-w-md mx-auto">
 
             {/* Home */}
-            <Link to="/" className="flex flex-col items-center min-w-[3.5rem] group">
+            <Link to="/" onClick={scrollToTop} className="flex flex-col items-center min-w-[3.5rem] group">
               <div className={`relative p-1.5 rounded-xl transition-all duration-200 ${activeCategory === 'home' ? 'text-black' : 'text-gray-400 group-active:scale-90'}`}>
                 {activeCategory === 'home' && <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-black rounded-full"></span>}
                 <svg className="w-[22px] h-[22px]" fill={activeCategory === 'home' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeCategory === 'home' ? 0 : 1.8}>
@@ -419,7 +425,7 @@ const Navbar = () => {
           {/* Header with brand logo (matches navbar) */}
           <div className="p-6 pt-10 flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link to="/" onClick={() => { setIsMobileMenuOpen(false); scrollToTop(); }}>
                 <img
                   src="https://res.cloudinary.com/dl6hpq7mm/image/upload/f_auto,q_auto,w_200/v1770185345/image-removebg-preview_2_we5d7r.png"
                   alt="choicetime"
@@ -480,7 +486,7 @@ const Navbar = () => {
 
             {/* Main Links */}
             <div className="space-y-4">
-              <Link to="/" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+              <Link to="/" className="block text-2xl font-light tracking-tight text-gray-900" onClick={() => { setIsMobileMenuOpen(false); scrollToTop(); }}>Home</Link>
               <Link to="/wishlist" className="block text-2xl font-light tracking-tight text-gray-900 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
                 Wishlist
                 {getWishlistCount() > 0 && (
