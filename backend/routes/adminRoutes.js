@@ -20,6 +20,10 @@ import {
   createShippingReturnPolicy,
   updateShippingReturnPolicy,
   deleteShippingReturnPolicy,
+  getReturnRequests,
+  updateReturnStatus,
+  getScratchCardPopupActive,
+  updateScratchCardPopupActive,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -48,6 +52,12 @@ router.get('/shipping-returns', getShippingReturnPolicies);
 router.post('/shipping-returns', createShippingReturnPolicy);
 router.put('/shipping-returns/:id', updateShippingReturnPolicy);
 router.delete('/shipping-returns/:id', deleteShippingReturnPolicy);
+
+router.get('/returns', getReturnRequests);
+router.patch('/returns/:id', updateReturnStatus);
+
+router.get('/settings/scratch-card-popup', getScratchCardPopupActive);
+router.patch('/settings/scratch-card-popup', updateScratchCardPopupActive);
 
 export default router;
 

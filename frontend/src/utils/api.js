@@ -163,6 +163,12 @@ export const orderAPI = {
   getOrder: async (orderId) => {
     return apiRequest(`/orders/${orderId}`);
   },
+  cancelOrder: async (orderId, payload) => {
+    return apiRequest(`/orders/${orderId}/cancel`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload || {}),
+    });
+  },
 
   createOrder: async (shippingAddress, paymentMethod = 'COD', couponCode = '') => {
     return apiRequest('/orders/create', {
@@ -354,6 +360,19 @@ export const adminAPI = {
     }),
   deleteShippingReturn: async (id) =>
     apiRequest(`/admin/shipping-returns/${id}`, { method: 'DELETE' }),
+
+  getReturns: async () => apiRequest('/admin/returns'),
+  getScratchCardPopupActive: async () => apiRequest('/admin/settings/scratch-card-popup'),
+  updateScratchCardPopupActive: async (active) =>
+    apiRequest('/admin/settings/scratch-card-popup', {
+      method: 'PATCH',
+      body: JSON.stringify({ active }),
+    }),
+  updateReturnStatus: async (id, payload) =>
+    apiRequest(`/admin/returns/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 };
 
 // Public Reel API (for home page)
@@ -407,6 +426,7 @@ export const wishlistAPI = {
 
 // Scratch Card API
 export const scratchCardAPI = {
+  getPopupActive: async () => apiRequest('/scratch-card/popup-active'),
   scratch: async (phone) => {
     return apiRequest('/scratch-card/scratch', {
       method: 'POST',
@@ -439,6 +459,17 @@ export const searchAPI = {
 // Shipping & Returns (public - for product page)
 export const shippingReturnAPI = {
   getPolicies: async () => apiRequest('/shipping-returns'),
+};
+
+// Return requests (user)
+export const returnsAPI = {
+  getMyReturns: async () => apiRequest('/returns'),
+  createReturn: async (payload) =>
+    apiRequest('/returns', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  checkReturn: async (orderId) => apiRequest(`/returns/check/${orderId}`),
 };
 
 // Order Tracking API calls

@@ -3,6 +3,8 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Category from '../models/Category.js';
 import ShippingReturnPolicy from '../models/ShippingReturnPolicy.js';
+import ReturnRequest from '../models/ReturnRequest.js';
+import Setting from '../models/Setting.js';
 
 export const getDashboardSummary = async (req, res) => {
   try {
@@ -580,6 +582,77 @@ export const deleteShippingReturnPolicy = async (req, res) => {
       message: 'Error deleting policy',
       error: error.message,
     });
+  }
+};
+
+// ========== Return Order Management ==========
+export const getReturnRequests = async (req, res) => {
+  try {
+    const list = await ReturnRequest.find()
+      .populate('order', 'orderDate status totalAmount items')
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: { returns: list } });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching return requests',
+      error: error.message,
+    });
+  }
+};
+
+export const updateReturnStatus = async (req, res) => {
+  try {
+    const { status, adminNotes } = req.body;
+    const valid = ['pending', 'approved', 'rejected', 'completed'];
+    if (!valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+    const doc = await ReturnRequest.findByIdAndUpdate(
+      req.params.id,
+      { status, adminNotes: adminNotes !== undefined ? adminNotes : undefined, updatedAt: new Date() },
+      { new: true }
+    )
+      .populate('order', 'orderDate status totalAmount')
+      .populate('user', 'name email phone');
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Return request not found' });
+    }
+    res.status(200).json({ success: true, data: { return: doc } });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating return request',
+      error: error.message,
+    });
+  }
+};
+
+const SCRATCH_POPUP_KEY = 'scratchCardPopupActive';
+
+export const getScratchCardPopupActive = async (req, res) => {
+  try {
+    const doc = await Setting.findOne({ key: SCRATCH_POPUP_KEY });
+    const active = doc != null && doc.value === false ? false : true;
+    res.status(200).json({ success: true, data: { active } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message, data: { active: true } });
+  }
+};
+
+export const updateScratchCardPopupActive = async (req, res) => {
+  try {
+    const { active } = req.body;
+    const value = active === true || active === 'true';
+    await Setting.findOneAndUpdate(
+      { key: SCRATCH_POPUP_KEY },
+      { value, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.status(200).json({ success: true, data: { active: value } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message });
   }
 };
 

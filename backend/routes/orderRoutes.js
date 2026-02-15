@@ -26,6 +26,45 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// Cancel order (user can cancel only if pending or processing); reason required
+router.patch('/:orderId/cancel', protect, async (req, res) => {
+  try {
+    const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a reason for cancellation',
+      });
+    }
+    const order = await Order.findOne({
+      _id: req.params.orderId,
+      user: req.user._id,
+    });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    const s = (order.status || '').toLowerCase();
+    if (s !== 'pending' && s !== 'processing') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending or processing orders can be cancelled',
+      });
+    }
+    order.status = 'cancelled';
+    order.cancelReason = reason;
+    order.cancelledAt = new Date();
+    await order.save();
+    res.status(200).json({ success: true, data: { order }, message: 'Order cancelled' });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cancelling order',
+      error: error.message,
+    });
+  }
+});
+
 // Get single order
 router.get('/:orderId', protect, async (req, res) => {
   try {

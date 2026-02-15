@@ -8,6 +8,7 @@ import { ToastProvider } from './components/ToastContainer';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScratchCardPopup from './components/ScratchCardPopup';
+import { scratchCardAPI } from './utils/api';
 import Home from './pages/Home';
 import CategoryPage from './pages/CategoryPage';
 import ProductDetail from './pages/ProductDetail';
@@ -47,15 +48,18 @@ function AppContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname, location.search]);
 
-  // Show scratch card popup immediately on first visit (not on admin pages)
+  // Show scratch card popup only when active (admin can turn off in Coupons section)
   useEffect(() => {
     if (isAdminRoute) return;
     const dismissed = localStorage.getItem('scratchCardDismissed');
-    // Show again if not dismissed in the last 24 hours
     const cooldown = 24 * 60 * 60 * 1000; // 24 hours
     if (dismissed && Date.now() - Number(dismissed) < cooldown) return;
-    setShowScratchCard(true);
-    return;
+    let cancelled = false;
+    scratchCardAPI.getPopupActive().then((res) => {
+      if (cancelled) return;
+      if (res?.success && res?.data?.active === true) setShowScratchCard(true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, [isAdminRoute]);
 
   return (

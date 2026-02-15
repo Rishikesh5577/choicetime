@@ -86,6 +86,14 @@ const orderSchema = new mongoose.Schema({
   deliveredDate: {
     type: Date,
   },
+  cancelReason: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  cancelledAt: {
+    type: Date,
+  },
 });
 
 const Order = mongoose.model('Order', orderSchema);

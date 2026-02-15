@@ -8,8 +8,6 @@ import ShopByCategory from '../components/home/ShopByCategory';
 import SubcategoryMarquee from '../components/home/SubcategoryMarquee';
 import ProductSection from '../components/home/ProductSection';
 import InstagramReels from '../components/InstagramReels';
-import FAQSection from '../components/home/FAQSection';
-
 const HOME_CACHE_KEY = 'homePage_topSelling';
 const HOME_CACHE_TIME_KEY = 'homePage_topSelling_timestamp';
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
@@ -106,9 +104,6 @@ const Home = () => {
           isLoading={false}
         />
       ))}
-
-      {/* Frequently Asked Questions */}
-      <FAQSection />
 
     </div>
   );

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { profileAPI } from '../utils/api';
+import { profileAPI, returnsAPI, orderAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import Invoice from '../components/Invoice';
 import { FileText } from 'lucide-react';
+import { uploadImageToCloudinary, uploadVideoToCloudinary } from '../utils/cloudinary';
 
 // --- ICONS (Minimalist / Stroke Style) ---
 const IconUser = (props) => (
@@ -58,10 +59,24 @@ const IconChevronRight = (props) => (
   </svg>
 );
 
+const RETURN_DAYS = 30;
+function getReturnWindowEnd(order) {
+  const base = order.deliveredDate ? new Date(order.deliveredDate) : new Date(order.orderDate);
+  const end = new Date(base);
+  end.setDate(end.getDate() + RETURN_DAYS);
+  return end;
+}
+function canReturnOrder(order) {
+  if (!order) return false;
+  const s = (order.status || '').toLowerCase();
+  if (s !== 'delivered' && s !== 'shipped') return false;
+  return new Date() <= getReturnWindowEnd(order);
+}
 
-// OrderRow component for displaying order with invoice
-const OrderRow = ({ order, user }) => {
+// OrderRow component for displaying order with invoice and return
+const OrderRow = ({ order, user, canReturn, alreadyRequested, returnStatus, returnRejectReason, onOpenReturn, onOpenCancelModal }) => {
   const [showInvoice, setShowInvoice] = useState(false);
+  const canCancel = order?.status === 'pending' || order?.status === 'processing';
 
   return (
     <>
@@ -76,7 +91,8 @@ const OrderRow = ({ order, user }) => {
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
             ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-200' :
               order.status === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
+                order.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
+                  'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
           </span>
         </td>
@@ -92,10 +108,40 @@ const OrderRow = ({ order, user }) => {
             View
           </button>
         </td>
+        <td className="px-6 py-4 text-center">
+          {alreadyRequested ? (
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xs font-medium text-gray-500 capitalize">{returnStatus || 'Requested'}</span>
+              {returnStatus === 'rejected' && returnRejectReason && (
+                <span className="text-xs text-red-600 max-w-[180px] truncate" title={returnRejectReason}>Reason: {returnRejectReason}</span>
+              )}
+            </div>
+          ) : canReturn ? (
+            <button
+              type="button"
+              onClick={() => onOpenReturn(order)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-colors"
+            >
+              Return
+            </button>
+          ) : canCancel ? (
+            <button
+              type="button"
+              onClick={() => onOpenCancelModal(order)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors"
+            >
+              Cancel order
+            </button>
+          ) : (
+            <span className="text-xs text-gray-400" title={order?.status === 'cancelled' ? 'Order cancelled' : 'Return window closed'}>
+              {order?.status === 'cancelled' ? '—' : 'Return'}
+            </span>
+          )}
+        </td>
       </tr>
       {showInvoice && (
         <tr>
-          <td colSpan="5" className="p-0">
+          <td colSpan="6" className="p-0">
             <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowInvoice(false)}>
               <div className="bg-white rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -140,6 +186,14 @@ const Profile = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [myReturns, setMyReturns] = useState([]);
+  const [returnModalOrder, setReturnModalOrder] = useState(null);
+  const [returnForm, setReturnForm] = useState({ reason: '', photoUrls: [], videoUrl: '', photoFiles: [], videoFile: null });
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnUploadProgress, setReturnUploadProgress] = useState({ photos: 0, video: 0 });
+  const [cancelLoadingId, setCancelLoadingId] = useState(null);
+  const [cancelModalOrder, setCancelModalOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Menu items config
   const menuItems = [
@@ -170,6 +224,19 @@ const Profile = () => {
       navigate('/profile?tab=orders', { replace: true });
     }
   }, [searchParams, navigate]);
+
+  const loadReturns = async () => {
+    try {
+      const res = await returnsAPI.getMyReturns();
+      if (res?.success && Array.isArray(res.data?.returns)) setMyReturns(res.data.returns);
+    } catch (e) {
+      console.error('Load returns error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'orders' && profileData?.orders?.length) loadReturns();
+  }, [activeTab, profileData?.orders?.length]);
 
   const loadProfile = async () => {
     try {
@@ -236,6 +303,102 @@ const Profile = () => {
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleReturnSubmit = async (e) => {
+    e.preventDefault();
+    if (!returnModalOrder?._id || !returnForm.reason?.trim()) {
+      setError('Please provide a reason for the return.');
+      return;
+    }
+    setReturnSubmitting(true);
+    setError('');
+    try {
+      let photoUrls = [...(returnForm.photoUrls || [])];
+      if (returnForm.photoFiles?.length) {
+        setReturnUploadProgress((p) => ({ ...p, photos: 0 }));
+        const total = returnForm.photoFiles.length;
+        for (let i = 0; i < returnForm.photoFiles.length; i++) {
+          const res = await uploadImageToCloudinary(returnForm.photoFiles[i], (percent) =>
+            setReturnUploadProgress((p) => ({ ...p, photos: Math.round(((i + percent / 100) / total) * 100) }))
+          );
+          if (res?.url) photoUrls.push(res.url);
+        }
+      }
+      let videoUrl = returnForm.videoUrl || '';
+      if (returnForm.videoFile) {
+        setReturnUploadProgress((p) => ({ ...p, video: 0 }));
+        const res = await uploadVideoToCloudinary(returnForm.videoFile, (percent) =>
+          setReturnUploadProgress((p) => ({ ...p, video: percent }))
+        );
+        if (res?.url) videoUrl = res.url;
+      }
+      const payload = {
+        orderId: returnModalOrder._id,
+        reason: returnForm.reason.trim(),
+        photoUrls: photoUrls.filter(Boolean),
+        ...(videoUrl && { videoUrl }),
+      };
+      const response = await returnsAPI.createReturn(payload);
+      if (response?.success) {
+        setSuccess('Return request submitted successfully.');
+        setReturnModalOrder(null);
+        setReturnForm({ reason: '', photoUrls: [], videoUrl: '', photoFiles: [], videoFile: null });
+        setReturnUploadProgress({ photos: 0, video: 0 });
+        await loadReturns();
+        await loadProfile();
+      } else {
+        setError(response?.message || 'Failed to submit return request.');
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to submit return request.');
+    } finally {
+      setReturnSubmitting(false);
+      setReturnUploadProgress({ photos: 0, video: 0 });
+    }
+  };
+
+  const closeReturnModal = () => {
+    if (!returnSubmitting) {
+      setReturnModalOrder(null);
+      setReturnForm({ reason: '', photoUrls: [], videoUrl: '', photoFiles: [], videoFile: null });
+      setReturnUploadProgress({ photos: 0, video: 0 });
+      setError('');
+    }
+  };
+
+  const handleCancelOrderSubmit = async (e) => {
+    e.preventDefault();
+    if (!cancelModalOrder?._id || !cancelReason?.trim()) {
+      setError('Please provide a reason for cancellation.');
+      return;
+    }
+    setCancelLoadingId(cancelModalOrder._id);
+    setError('');
+    try {
+      const res = await orderAPI.cancelOrder(cancelModalOrder._id, { reason: cancelReason.trim() });
+      if (res?.success) {
+        setSuccess('Order cancelled.');
+        setCancelModalOrder(null);
+        setCancelReason('');
+        await loadProfile();
+        await loadReturns();
+      } else {
+        setError(res?.message || 'Failed to cancel order.');
+      }
+    } catch (err) {
+      setError(err?.message || 'Failed to cancel order.');
+    } finally {
+      setCancelLoadingId(null);
+    }
+  };
+
+  const closeCancelModal = () => {
+    if (!cancelLoadingId) {
+      setCancelModalOrder(null);
+      setCancelReason('');
+      setError('');
+    }
   };
 
   // Reusable Input Style (Matches Login/Signup)
@@ -425,12 +588,35 @@ const Profile = () => {
                               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                               <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice</th>
+                              <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Return</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {profileData.orders.map((order) => (
-                              <OrderRow key={order._id} order={order} user={profileData.user} />
-                            ))}
+                            {profileData.orders.map((order) => {
+                              const returnForOrder = myReturns.find((r) => {
+                                const oid = r.order?._id ?? r.order;
+                                return oid && String(oid) === String(order._id);
+                              });
+                              return (
+                                <OrderRow
+                                  key={order._id}
+                                  order={order}
+                                  user={profileData.user}
+                                  canReturn={canReturnOrder(order)}
+                                  alreadyRequested={!!returnForOrder}
+                                  returnStatus={returnForOrder?.status}
+                                  returnRejectReason={returnForOrder?.status === 'rejected' ? (returnForOrder?.adminNotes || '') : ''}
+                                  onOpenReturn={() => {
+                                setReturnForm({ reason: '', photoUrls: [], videoUrl: '', photoFiles: [], videoFile: null });
+                                setReturnModalOrder(order);
+                              }}
+                                  onOpenCancelModal={(order) => {
+                                setCancelModalOrder(order);
+                                setCancelReason('');
+                              }}
+                                />
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -445,6 +631,108 @@ const Profile = () => {
                         </Link>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Return Request Modal */}
+                {returnModalOrder && (
+                  <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={closeReturnModal}>
+                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                      <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                        <h2 className="text-lg font-bold text-zinc-900">Request Return — #{returnModalOrder._id?.slice(-6).toUpperCase()}</h2>
+                        <button type="button" onClick={closeReturnModal} disabled={returnSubmitting} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                      <form onSubmit={handleReturnSubmit} className="p-6 space-y-5">
+                        <div>
+                          <label className={labelClass}>Reason for return *</label>
+                          <textarea
+                            name="reason"
+                            value={returnForm.reason}
+                            onChange={(e) => setReturnForm((f) => ({ ...f, reason: e.target.value }))}
+                            placeholder="Describe why you want to return this order..."
+                            rows={4}
+                            className={inputClass}
+                            required
+                            disabled={returnSubmitting}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Product photos</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => setReturnForm((f) => ({ ...f, photoFiles: e.target.files ? Array.from(e.target.files) : [] }))}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100"
+                            disabled={returnSubmitting}
+                          />
+                          {returnSubmitting && returnForm.photoFiles?.length > 0 && (
+                            <p className="mt-1 text-xs text-gray-500">Uploading photos... {returnUploadProgress.photos}%</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelClass}>Product video (optional)</label>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={(e) => setReturnForm((f) => ({ ...f, videoFile: e.target.files?.[0] || null }))}
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100"
+                            disabled={returnSubmitting}
+                          />
+                          {returnSubmitting && returnForm.videoFile && (
+                            <p className="mt-1 text-xs text-gray-500">Uploading video... {returnUploadProgress.video}%</p>
+                          )}
+                        </div>
+                        {error && <p className="text-sm text-red-600">{error}</p>}
+                        <div className="flex gap-3 pt-2">
+                          <button type="button" onClick={closeReturnModal} disabled={returnSubmitting} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                            Cancel
+                          </button>
+                          <button type="submit" disabled={returnSubmitting} className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50">
+                            {returnSubmitting ? 'Submitting...' : 'Submit return request'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cancel Order Modal */}
+                {cancelModalOrder && (
+                  <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={closeCancelModal}>
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full my-8" onClick={(e) => e.stopPropagation()}>
+                      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                        <h2 className="text-lg font-bold text-zinc-900">Cancel order — #{cancelModalOrder._id?.slice(-6).toUpperCase()}</h2>
+                        <button type="button" onClick={closeCancelModal} disabled={!!cancelLoadingId} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                      <form onSubmit={handleCancelOrderSubmit} className="p-6 space-y-4">
+                        <div>
+                          <label className={labelClass}>Reason for cancellation *</label>
+                          <textarea
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            placeholder="Why do you want to cancel this order?"
+                            rows={3}
+                            className={inputClass}
+                            required
+                            disabled={!!cancelLoadingId}
+                          />
+                        </div>
+                        {error && <p className="text-sm text-red-600">{error}</p>}
+                        <div className="flex gap-3 pt-2">
+                          <button type="button" onClick={closeCancelModal} disabled={!!cancelLoadingId} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                            Back
+                          </button>
+                          <button type="submit" disabled={!!cancelLoadingId || !cancelReason.trim()} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+                            {cancelLoadingId ? 'Cancelling...' : 'Cancel order'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 )}
 

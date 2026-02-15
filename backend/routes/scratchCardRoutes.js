@@ -1,8 +1,22 @@
 import express from 'express';
 import ScratchCard from '../models/ScratchCard.js';
 import Coupon from '../models/Coupon.js';
+import Setting from '../models/Setting.js';
 
 const router = express.Router();
+
+const SCRATCH_POPUP_KEY = 'scratchCardPopupActive';
+
+// GET /api/scratch-card/popup-active — public, whether to show scratch & win popup on site
+router.get('/popup-active', async (req, res) => {
+  try {
+    const doc = await Setting.findOne({ key: SCRATCH_POPUP_KEY });
+    const active = doc != null && doc.value === false ? false : true;
+    res.status(200).json({ success: true, data: { active } });
+  } catch (err) {
+    res.status(500).json({ success: false, data: { active: true } });
+  }
+});
 
 // POST /api/scratch-card/scratch
 // Public route - no auth needed, just phone number

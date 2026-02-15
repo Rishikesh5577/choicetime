@@ -85,19 +85,25 @@ const IconShippingReturns = (props) => (
   </svg>
 );
 
+const IconReturnOrders = (props) => (
+  <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-3m0 0v-3m0 3h3m-3 0h-3m-2-5a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
 // Sidebar menu items
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
   { id: 'products', label: 'View Products', icon: IconProducts },
   { id: 'add-product', label: 'Add Product', icon: IconAdd },
   { id: 'edit-product', label: 'Edit Product', icon: IconEdit },
-  { id: 'delete-product', label: 'Delete Product', icon: IconDelete },
   { id: 'categories', label: 'Nav Categories', icon: IconCategories },
   { id: 'home-reels', label: 'Home Page Reels', icon: IconReels },
   { id: 'orders', label: 'Manage Orders', icon: IconOrders },
   { id: 'order-status', label: 'Order Status', icon: IconStatus },
   { id: 'coupons', label: 'Coupons', icon: IconCoupon },
   { id: 'shipping-returns', label: 'Shipping & Returns', icon: IconShippingReturns },
+  { id: 'return-orders', label: 'Return Order Management', icon: IconReturnOrders },
   { id: 'users', label: 'Manage Users', icon: IconUsers },
 ];
 
@@ -194,6 +200,8 @@ const AdminDashboard = () => {
   const [editingCoupon, setEditingCoupon] = useState(null);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [successPopup, setSuccessPopup] = useState({ show: false, text: '' });
+  const [scratchCardPopupActive, setScratchCardPopupActive] = useState(true);
+  const [scratchCardPopupUpdating, setScratchCardPopupUpdating] = useState(false);
 
   // Shipping & Returns (product page policies)
   const [shippingReturnsPolicies, setShippingReturnsPolicies] = useState([]);
@@ -205,6 +213,44 @@ const AdminDashboard = () => {
   });
   const [editingShippingReturn, setEditingShippingReturn] = useState(null);
   const [loadingShippingReturns, setLoadingShippingReturns] = useState(false);
+
+  // Return order management
+  const [returnRequests, setReturnRequests] = useState([]);
+  const [returnUpdatingId, setReturnUpdatingId] = useState(null);
+  const [returnAdminNotes, setReturnAdminNotes] = useState({});
+
+  // Manage Orders: selected order for detail view (modal)
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState(null);
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+
+  const filteredProductsBySearch = useMemo(() => {
+    const list = products || [];
+    const q = (productSearchQuery || '').trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((p) => {
+      const name = (p.name || p.title || '').toLowerCase();
+      const brand = (p.brand || '').toLowerCase();
+      const sub = (p.subCategory || p.subcategory || '').toLowerCase();
+      const priceStr = String(p.price || p.finalPrice || '');
+      return name.includes(q) || brand.includes(q) || sub.includes(q) || priceStr.includes(q);
+    });
+  }, [products, productSearchQuery]);
+
+  const filteredOrdersForSearch = useMemo(() => {
+    const list = orders || [];
+    const q = (orderSearchQuery || '').trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((o) => {
+      const id = (o._id || '').toLowerCase();
+      const name = (o.user?.name || '').toLowerCase();
+      const email = (o.user?.email || '').toLowerCase();
+      const status = (o.status || '').toLowerCase();
+      const totalStr = String(o.totalAmount || '');
+      const dateStr = o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).toLowerCase() : '';
+      return id.includes(q) || name.includes(q) || email.includes(q) || status.includes(q) || totalStr.includes(q) || dateStr.includes(q);
+    });
+  }, [orders, orderSearchQuery]);
 
   const showSuccessPopup = (text) => {
     setSuccessPopup({ show: true, text });
@@ -228,7 +274,7 @@ const AdminDashboard = () => {
       fetchSummary();
       fetchOrders();
     }
-    if (activeSection === 'products' || activeSection === 'add-product' || activeSection === 'edit-product' || activeSection === 'delete-product') {
+    if (activeSection === 'products' || activeSection === 'add-product' || activeSection === 'edit-product') {
       fetchProducts(productCategory);
       setSelectedSubCategory(''); // Reset subcategory filter when category changes
     }
@@ -243,9 +289,13 @@ const AdminDashboard = () => {
     }
     if (activeSection === 'coupons') {
       fetchCoupons();
+      fetchScratchCardPopupSetting();
     }
     if (activeSection === 'shipping-returns') {
       fetchShippingReturns();
+    }
+    if (activeSection === 'return-orders') {
+      fetchReturnRequests();
     }
   }, [isAdmin, activeSection, productCategory]);
 
@@ -323,6 +373,34 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: error.message || 'Failed to fetch users' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReturnRequests = async () => {
+    try {
+      const res = await adminAPI.getReturns();
+      if (res?.success && Array.isArray(res.data?.returns)) {
+        setReturnRequests(res.data.returns);
+      } else {
+        setReturnRequests([]);
+      }
+    } catch (e) {
+      console.error('Error fetching return requests:', e);
+      setMessage({ type: 'error', text: e?.message || 'Failed to fetch return requests' });
+      setReturnRequests([]);
+    }
+  };
+
+  const handleUpdateReturnStatus = async (id, status, adminNotes) => {
+    try {
+      setReturnUpdatingId(id);
+      await adminAPI.updateReturnStatus(id, { status, adminNotes: adminNotes || undefined });
+      showSuccessPopup('Return status updated.');
+      await fetchReturnRequests();
+    } catch (e) {
+      setMessage({ type: 'error', text: e?.message || 'Failed to update return status' });
+    } finally {
+      setReturnUpdatingId(null);
     }
   };
 
@@ -506,6 +584,29 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: error.message || 'Failed to load coupons' });
     } finally {
       setLoadingCoupons(false);
+    }
+  };
+
+  const fetchScratchCardPopupSetting = async () => {
+    try {
+      const res = await adminAPI.getScratchCardPopupActive();
+      if (res?.success && typeof res?.data?.active === 'boolean') setScratchCardPopupActive(res.data.active);
+    } catch (e) {
+      console.error('Fetch scratch card popup setting:', e);
+    }
+  };
+
+  const handleToggleScratchCardPopup = async () => {
+    const next = !scratchCardPopupActive;
+    setScratchCardPopupUpdating(true);
+    try {
+      await adminAPI.updateScratchCardPopupActive(next);
+      setScratchCardPopupActive(next);
+      showSuccessPopup(next ? 'Scratch & Win popup is now active.' : 'Scratch & Win popup is now inactive.');
+    } catch (e) {
+      setMessage({ type: 'error', text: e?.message || 'Failed to update' });
+    } finally {
+      setScratchCardPopupUpdating(false);
     }
   };
 
@@ -1223,8 +1324,8 @@ const AdminDashboard = () => {
         );
 
       case 'products': {
-        // Filter by subcategory if selected
-        let filteredProducts = products || [];
+        // Start with search-filtered list, then filter by subcategory if selected
+        let filteredProducts = filteredProductsBySearch;
         if (selectedSubCategory) {
           filteredProducts = filteredProducts.filter((product) => {
             const productSubCategory = (product.subCategory || product.subcategory || '').toLowerCase().trim();
@@ -1305,7 +1406,25 @@ const AdminDashboard = () => {
                 </select>
               </div>
             </div>
-            
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search by product name, brand, subcategory, price..."
+                  value={productSearchQuery}
+                  onChange={(e) => { setProductSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              {productSearchQuery.trim() && (
+                <span className="text-sm text-gray-500">
+                  {filteredProductsBySearch.length} of {(products || []).length} products
+                </span>
+              )}
+            </div>
             {/* Subcategory Filter Buttons - from Nav Categories */}
             {viewSubCategoryOptionsFromNav.length > 0 && (
               <div className="bg-white rounded-lg border p-4">
@@ -1361,7 +1480,9 @@ const AdminDashboard = () => {
               <p className="text-sm text-gray-500">Loading...</p>
             ) : filteredProducts.length === 0 ? (
               <p className="text-sm text-gray-500">
-                {selectedSubCategory 
+                {filteredProductsBySearch.length === 0 && (products || []).length > 0
+                  ? 'No products match your search.'
+                  : selectedSubCategory 
                   ? `No products found in ${selectedSubCategory} subcategory.`
                   : 'No products in this category yet.'}
               </p>
@@ -2099,6 +2220,27 @@ const AdminDashboard = () => {
                 ))}
               </select>
             </div>
+            {!editingProduct && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <div className="relative flex-1 max-w-md">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search by product name, brand, subcategory, price..."
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                {productSearchQuery.trim() && (
+                  <span className="text-sm text-gray-500">
+                    {filteredProductsBySearch.length} of {(products || []).length} products
+                  </span>
+                )}
+              </div>
+            )}
             {editingProduct ? (
               <form onSubmit={handleUpdateProduct} className="bg-white rounded-xl border p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2638,12 +2780,14 @@ const AdminDashboard = () => {
                   </button>
                 </div>
               </form>
-            ) : (
-              <>
+) : (
+                  <>
                 {loading ? (
                   <p className="text-sm text-gray-500">Loading products...</p>
                 ) : (products || []).length === 0 ? (
                   <p className="text-sm text-gray-500">No products in this category yet.</p>
+                ) : filteredProductsBySearch.length === 0 ? (
+                  <p className="text-sm text-gray-500">No products match your search.</p>
                 ) : (
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
@@ -2659,7 +2803,7 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {products.map((product) => {
+                          {filteredProductsBySearch.map((product) => {
                             let imageUrl = null;
                             if (Array.isArray(product.images) && product.images.length > 0) {
                               imageUrl = product.images[0];
@@ -3165,29 +3309,79 @@ const AdminDashboard = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Manage Orders</h2>
               <button
                 onClick={fetchOrders}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 w-full sm:w-auto"
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 rounded-lg w-full sm:w-auto"
               >
                 Refresh
               </button>
             </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search by Order ID, customer, email, status, total..."
+                  value={orderSearchQuery}
+                  onChange={(e) => setOrderSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              {orderSearchQuery.trim() && (
+                <span className="text-sm text-gray-500">
+                  {filteredOrdersForSearch.length} of {(orders || []).length} orders
+                </span>
+              )}
+            </div>
             {(orders || []).length === 0 ? (
-              <div className="bg-white border p-12 text-center">
+              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
                 <p className="text-gray-500 text-sm">No orders yet</p>
               </div>
+            ) : filteredOrdersForSearch.length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+                <p className="text-gray-500 text-sm">No orders match your search</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6">
-                {orders.map((order) => (
-                  <div key={order._id} className="bg-white border border-gray-200">
-                    {/* Order Header */}
-                    <div className="bg-gray-50 border-b border-gray-200 px-4 sm:px-6 py-4">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div className="flex-1 w-full">
-                          <div className="flex flex-wrap items-center gap-3 mb-2">
-                            <h3 className="font-bold text-gray-900 text-base sm:text-lg">
-                              Order #{order._id?.slice(-8)?.toUpperCase() || 'N/A'}
-                            </h3>
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Order ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredOrdersForSearch.map((order) => (
+                        <tr
+                          key={order._id}
+                          className="hover:bg-gray-50/80 transition-colors cursor-pointer"
+                          onClick={() => setSelectedOrderDetail(order)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                            #{order._id?.slice(-8)?.toUpperCase() || 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                            {new Date(order.orderDate || order.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 max-w-[140px] truncate" title={order.user?.name}>
+                            {order.user?.name || 'Guest'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 max-w-[160px] truncate" title={order.user?.email}>
+                            {order.user?.email || 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <span
-                              className={`px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                              className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
                                 order.status === 'delivered'
                                   ? 'bg-green-100 text-green-800'
                                   : order.status === 'shipped'
@@ -3201,141 +3395,113 @@ const AdminDashboard = () => {
                             >
                               {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Pending'}
                             </span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="text-gray-600">Customer:</span>
-                              <span className="ml-2 font-medium text-gray-900">
-                                {order.user?.name || 'Guest'}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Email:</span>
-                              <span className="ml-2 text-gray-900">{order.user?.email || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Date:</span>
-                              <span className="ml-2 text-gray-900">
-                                {new Date(order.orderDate || order.createdAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Items:</span>
-                              <span className="ml-2 font-medium text-gray-900">
-                                {order.items?.length || 0} item(s)
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
-                            <p className="text-xl font-bold text-gray-900 mt-1">
-                              ₹{order.totalAmount?.toLocaleString() || '0'}
-                            </p>
-                            {order.coupon?.code && (
-                              <p className="text-xs text-green-600 mt-0.5">
-                                Coupon: <span className="font-mono font-bold">{order.coupon.code}</span> (-₹{order.coupon.discount})
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleDeleteOrder(order._id)}
-                            className="px-4 py-2 bg-red-600 text-white text-xs font-semibold hover:bg-red-700 whitespace-nowrap"
-                          >
-                            Delete Order
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right whitespace-nowrap">
+                            ₹{order.totalAmount?.toLocaleString() || '0'}
+                          </td>
+                          <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSelectedOrderDetail(order); }}
+                              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Order detail modal - opens when row or View is clicked */}
+            {selectedOrderDetail && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedOrderDetail(null)}>
+                <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const order = selectedOrderDetail;
+                    return (
+                      <>
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl z-10">
+                          <h3 className="text-lg font-bold text-gray-900">Order #{order._id?.slice(-8)?.toUpperCase() || 'N/A'}</h3>
+                          <button type="button" onClick={() => setSelectedOrderDetail(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Order Items Section */}
-                    <div className="px-4 sm:px-6 py-4">
-                      <div className="mb-4 pb-4 border-b border-gray-200">
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">Update Order Status:</label>
-                        <select
-                          value={order.status || 'pending'}
-                          onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
-                          className="text-sm border border-gray-300 px-4 py-2 w-full sm:w-64 bg-white"
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">Order Items</h4>
-                        <div className="space-y-3">
-                          {order.items?.map((item, index) => (
-                            <div
-                              key={index}
-                              className="border border-gray-200 bg-white p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-                            >
-                              {item.product?.images?.[0] ? (
-                                <img
-                                  src={item.product.images[0]}
-                                  alt={item.product.name}
-                                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover border border-gray-200 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center">
-                                  <span className="text-xs text-gray-400">No Image</span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                                <h5 className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
-                                  {item.product?.name || 'Product Name Not Available'}
-                                </h5>
-                                {item.product?.brand && (
-                                  <p className="text-xs text-gray-600 mb-2">Brand: {item.product.brand}</p>
-                                )}
-                                <div className="flex flex-wrap gap-4 text-xs sm:text-sm">
-                                  <div>
-                                    <span className="text-gray-600">Quantity:</span>
-                                    <span className="ml-2 font-medium text-gray-900">{item.quantity}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Unit Price:</span>
-                                    <span className="ml-2 font-medium text-gray-900">
-                                      ₹{item.price?.toLocaleString() || '0'}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Size:</span>
-                                    <span className="ml-2 font-medium text-gray-900">
-                                      {item.selectedSize || item.size || 'N/A'}
-                                    </span>
-                                  </div>
-                                  {item.boxType && (
-                                    <div>
-                                      <span className="text-gray-600">Box:</span>
-                                      <span className="ml-2 font-medium text-gray-900">
-                                        {item.boxType}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right flex-shrink-0 w-full sm:w-auto sm:ml-auto">
-                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Subtotal</p>
-                                <p className="text-lg font-bold text-gray-900">
-                                  ₹{((item.price || 0) * (item.quantity || 0)).toLocaleString()}
-                                </p>
-                              </div>
+                        <div className="p-6 space-y-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className={`px-3 py-1 text-xs font-semibold uppercase rounded-full ${
+                              order.status === 'delivered' ? 'bg-green-100 text-green-800' : order.status === 'shipped' ? 'bg-indigo-100 text-indigo-800' : order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Pending'}
+                            </span>
+                            {order.status === 'cancelled' && order.cancelReason && (
+                              <p className="text-xs text-red-700" title={order.cancelReason}>Reason: {order.cancelReason}</p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                            <div><span className="text-gray-600">Customer:</span> <span className="font-medium text-gray-900">{order.user?.name || 'Guest'}</span></div>
+                            <div><span className="text-gray-600">Email:</span> <span className="text-gray-900">{order.user?.email || 'N/A'}</span></div>
+                            <div><span className="text-gray-600">Date:</span> <span className="text-gray-900">{new Date(order.orderDate || order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span></div>
+                            <div><span className="text-gray-600">Items:</span> <span className="font-medium text-gray-900">{order.items?.length || 0} item(s)</span></div>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200">
+                            <div>
+                              <p className="text-xs text-gray-500 uppercase">Total</p>
+                              <p className="text-xl font-bold text-gray-900">₹{order.totalAmount?.toLocaleString() || '0'}</p>
+                              {order.coupon?.code && <p className="text-xs text-green-600">Coupon: {order.coupon.code} (-₹{order.coupon.discount})</p>}
                             </div>
-                          ))}
+                            <div className="flex gap-2">
+                              <select
+                                value={order.status || 'pending'}
+                                onChange={(e) => handleOrderStatusChange(order._id, e.target.value)}
+                                className="text-sm border border-gray-300 px-3 py-2 rounded-lg bg-white"
+                              >
+                                {statusOptions.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                              </select>
+                              <button
+                                onClick={() => { handleDeleteOrder(order._id); setSelectedOrderDetail(null); }}
+                                className="px-4 py-2 bg-red-600 text-white text-xs font-semibold hover:bg-red-700 rounded-lg"
+                              >
+                                Delete Order
+                              </button>
+                            </div>
+                          </div>
+                          <div className="pt-4 border-t border-gray-200">
+                            <h4 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">Order Items</h4>
+                            <div className="space-y-3">
+                              {order.items?.map((item, index) => (
+                                <div key={index} className="border border-gray-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                  {item.product?.images?.[0] ? (
+                                    <img src={item.product.images[0]} alt={item.product.name} className="w-20 h-20 object-cover border border-gray-200 rounded flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded flex-shrink-0 flex items-center justify-center"><span className="text-xs text-gray-400">No Image</span></div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-semibold text-gray-900 text-sm mb-1">{item.product?.name || 'Product'}</h5>
+                                    {item.product?.brand && <p className="text-xs text-gray-600">Brand: {item.product.brand}</p>}
+                                    <div className="flex flex-wrap gap-3 text-xs mt-2">
+                                      <span>Qty: {item.quantity}</span>
+                                      <span>₹{item.price?.toLocaleString() || '0'} each</span>
+                                      <span>Size: {item.size || item.selectedSize || 'N/A'}</span>
+                                      {item.boxType && <span>Box: {item.boxType}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <p className="text-xs text-gray-500">Subtotal</p>
+                                    <p className="font-bold text-gray-900">₹{((item.price || 0) * (item.quantity || 0)).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </div>
@@ -3348,18 +3514,41 @@ const AdminDashboard = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Order Status Management</h2>
               <button
                 onClick={fetchOrders}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 w-full sm:w-auto"
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 w-full sm:w-auto rounded-lg"
               >
                 Refresh
               </button>
             </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search by Order ID, customer, email, status, total..."
+                  value={orderSearchQuery}
+                  onChange={(e) => setOrderSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              {orderSearchQuery.trim() && (
+                <span className="text-sm text-gray-500">
+                  {filteredOrdersForSearch.length} of {(orders || []).length} orders
+                </span>
+              )}
+            </div>
             {(orders || []).length === 0 ? (
-              <div className="bg-white border p-12 text-center">
+              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
                 <p className="text-gray-500 text-sm">No orders yet</p>
+              </div>
+            ) : filteredOrdersForSearch.length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+                <p className="text-gray-500 text-sm">No orders match your search</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6">
-                {orders.map((order) => (
+                {filteredOrdersForSearch.map((order) => (
                   <div key={order._id} className="bg-white border border-gray-200">
                     <div className="px-4 sm:px-6 py-4">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -3383,6 +3572,11 @@ const AdminDashboard = () => {
                             >
                               {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Pending'}
                             </span>
+                            {order.status === 'cancelled' && order.cancelReason && (
+                              <p className="text-xs text-red-700 mt-1 w-full" title={order.cancelReason}>
+                                Reason: {order.cancelReason}
+                              </p>
+                            )}
                           </div>
                           <div className="space-y-1 text-sm">
                             <div>
@@ -3450,6 +3644,115 @@ const AdminDashboard = () => {
           </div>
         );
 
+      case 'return-orders':
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Return Order Management</h2>
+              <button
+                type="button"
+                onClick={fetchReturnRequests}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 rounded-lg"
+              >
+                Refresh
+              </button>
+            </div>
+            {(returnRequests || []).length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+                <p className="text-gray-500 text-sm">No return requests</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Order</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">User</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Photos / Video</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {returnRequests.map((req) => {
+                      const orderId = req.order?._id ?? req.order ?? '—';
+                      const orderLabel = typeof orderId === 'string' ? `#${orderId.slice(-6).toUpperCase()}` : '—';
+                      const userName = req.user?.name || req.user?.email || '—';
+                      const isUpdating = returnUpdatingId === req._id;
+                      return (
+                        <tr key={req._id} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{orderLabel}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{userName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={req.reason}>{req.reason || '—'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex flex-wrap gap-2">
+                              {(req.photoUrls || []).map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Photo {i + 1}</a>
+                              ))}
+                              {req.videoUrl && (
+                                <a href={req.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Video</a>
+                              )}
+                              {!(req.photoUrls?.length) && !req.videoUrl && '—'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              req.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              req.status === 'completed' ? 'bg-gray-100 text-gray-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {(req.status || 'pending').toLowerCase()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="text"
+                                placeholder="Notes / Reject reason (user will see if rejected)"
+                                value={returnAdminNotes[req._id] ?? req.adminNotes ?? ''}
+                                onChange={(e) => setReturnAdminNotes((prev) => ({ ...prev, [req._id]: e.target.value }))}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded w-48"
+                              />
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateReturnStatus(req._id, 'approved', returnAdminNotes[req._id] ?? req.adminNotes)}
+                                  disabled={isUpdating || req.status === 'approved'}
+                                  className="px-2 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateReturnStatus(req._id, 'rejected', returnAdminNotes[req._id] ?? req.adminNotes)}
+                                  disabled={isUpdating || req.status === 'rejected'}
+                                  className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                                >
+                                  Reject
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateReturnStatus(req._id, 'completed', returnAdminNotes[req._id] ?? req.adminNotes)}
+                                  disabled={isUpdating || req.status === 'completed' || req.status !== 'approved'}
+                                  className="px-2 py-1 text-xs font-medium bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                                  title="Mark return as completed (e.g. refund done)"
+                                >
+                                  Mark completed
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+
       case 'users':
         return (
           <div className="space-y-6">
@@ -3481,11 +3784,6 @@ const AdminDashboard = () => {
                             <h3 className="font-bold text-gray-900 text-base sm:text-lg">
                               {user.name || 'No Name'}
                             </h3>
-                            {user.isAdmin && (
-                              <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-800">
-                                Admin
-                              </span>
-                            )}
                           </div>
                           <div className="space-y-1 text-sm">
                             <div>
@@ -3519,10 +3817,10 @@ const AdminDashboard = () => {
                         <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
                           <button
                             onClick={() => handleDeleteUser(user._id)}
-                            className="px-4 py-2 bg-red-600 text-white text-xs font-semibold hover:bg-red-700 whitespace-nowrap w-full sm:w-auto"
+                            className="px-4 py-2 bg-red-600 text-white text-xs font-semibold hover:bg-red-700 whitespace-nowrap w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={user.isAdmin}
                           >
-                            {user.isAdmin ? 'Cannot Delete Admin' : 'Delete User'}
+                            Delete User
                           </button>
                         </div>
                       </div>
@@ -3538,6 +3836,34 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Coupon Management</h2>
+
+            {/* Scratch & Win popup — Active / Inactive */}
+            <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Scratch & Win popup</h3>
+                  <p className="text-sm text-gray-600 mt-1">Show the &quot;Scratch and Win&quot; popup when users open the website. Turn off to stop showing it.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleScratchCardPopup}
+                  disabled={scratchCardPopupUpdating}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors shrink-0 disabled:opacity-50 ${
+                    scratchCardPopupActive
+                      ? 'bg-amber-500 text-gray-900 hover:bg-amber-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {scratchCardPopupUpdating ? (
+                    <span className="animate-pulse">Updating...</span>
+                  ) : scratchCardPopupActive ? (
+                    <>Active</>
+                  ) : (
+                    <>Inactive</>
+                  )}
+                </button>
+              </div>
+            </div>
 
             {/* Create / Edit Coupon Form */}
             <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-6 shadow-sm">
