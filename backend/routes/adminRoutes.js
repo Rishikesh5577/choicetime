@@ -16,6 +16,10 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  getShippingReturnPolicies,
+  createShippingReturnPolicy,
+  updateShippingReturnPolicy,
+  deleteShippingReturnPolicy,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -39,6 +43,11 @@ router.get('/categories', getAdminCategories);
 router.post('/categories', createCategory);
 router.put('/categories/:id', updateCategory);
 router.delete('/categories/:id', deleteCategory);
+
+router.get('/shipping-returns', getShippingReturnPolicies);
+router.post('/shipping-returns', createShippingReturnPolicy);
+router.put('/shipping-returns/:id', updateShippingReturnPolicy);
+router.delete('/shipping-returns/:id', deleteShippingReturnPolicy);
 
 export default router;
 

@@ -3,7 +3,6 @@ import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import { generateToken } from '../utils/generateToken.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { sendOTP } from '../utils/fast2sms.js';
 import { generateOTP, storeOTP, verifyOTP } from '../utils/otpStore.js';
 
 const router = express.Router();
@@ -245,31 +244,15 @@ router.post('/send-otp', async (req, res) => {
       });
     }
 
-    // Generate OTP
+    // Generate OTP and store (no SMS sent)
     const otp = generateOTP();
-    
-    // Store OTP
     storeOTP(cleanPhone, otp);
 
-    // Send OTP via Fast2SMS
-    try {
-      await sendOTP(cleanPhone, otp);
-      
-      res.status(200).json({
-        success: true,
-        message: 'OTP sent successfully to your phone number',
-      });
-    } catch (smsError) {
-      console.error('SMS sending error:', smsError);
-      // Still return success but log the error
-      // In development, you might want to return the OTP for testing
-      res.status(200).json({
-        success: true,
-        message: 'OTP generated successfully',
-        // Only include OTP in development for testing
-        ...(process.env.NODE_ENV === 'development' && { otp }),
-      });
-    }
+    res.status(200).json({
+      success: true,
+      message: 'OTP generated successfully',
+      ...(process.env.NODE_ENV === 'development' && { otp }),
+    });
   } catch (error) {
     console.error('Send OTP error:', error);
     res.status(500).json({

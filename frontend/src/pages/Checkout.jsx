@@ -170,21 +170,21 @@ const Checkout = () => {
         setLoading(true);
         setProcessingStep(0);
 
-        // Step 1: Validating order details (2 seconds)
+        // Step 1: Validating order details (~0.5s)
         setProcessingStep(1);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Step 2: Processing payment method (6 seconds)
+        // Step 2: Processing payment method (~0.5s)
         setProcessingStep(2);
-        await new Promise(resolve => setTimeout(resolve, 6000));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Step 3: Confirming order (5 seconds)
+        // Step 3: Confirming order (~0.5s)
         setProcessingStep(3);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Step 4: Creating order (3 seconds delay before API call, then API call)
+        // Step 4: Creating order (~0.5s then API call)
         setProcessingStep(4);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         const response = await orderAPI.createOrder(shippingAddress, 'COD', appliedCoupon?.code || '');
 
         if (response.success) {
@@ -193,9 +193,9 @@ const Checkout = () => {
           // Clear coupon from session
           sessionStorage.removeItem('appliedCoupon');
 
-          // Step 5: Order confirmed (2 seconds)
+          // Step 5: Order confirmed (~0.5s)
           setProcessingStep(5);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 500));
 
           setIsProcessingOrder(false);
           setLoading(false);

@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Category from '../models/Category.js';
+import ShippingReturnPolicy from '../models/ShippingReturnPolicy.js';
 
 export const getDashboardSummary = async (req, res) => {
   try {
@@ -480,6 +481,103 @@ export const deleteCategory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting category',
+      error: error.message,
+    });
+  }
+};
+
+// ========== Shipping & Returns Policy (for product page) ==========
+export const getShippingReturnPolicies = async (req, res) => {
+  try {
+    const policies = await ShippingReturnPolicy.find().sort({ order: 1 });
+    res.status(200).json({
+      success: true,
+      data: { policies },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching shipping & returns policies',
+      error: error.message,
+    });
+  }
+};
+
+export const createShippingReturnPolicy = async (req, res) => {
+  try {
+    const { title, description, iconColor, order } = req.body;
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and description are required',
+      });
+    }
+    const policy = await ShippingReturnPolicy.create({
+      title: (title || '').trim(),
+      description: (description || '').trim(),
+      iconColor: ['green', 'blue', 'purple'].includes(iconColor) ? iconColor : 'green',
+      order: typeof order === 'number' ? order : await ShippingReturnPolicy.countDocuments(),
+    });
+    res.status(201).json({
+      success: true,
+      message: 'Policy created',
+      data: { policy },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error creating policy',
+      error: error.message,
+    });
+  }
+};
+
+export const updateShippingReturnPolicy = async (req, res) => {
+  try {
+    const { title, description, iconColor, order } = req.body;
+    const policy = await ShippingReturnPolicy.findById(req.params.id);
+    if (!policy) {
+      return res.status(404).json({
+        success: false,
+        message: 'Policy not found',
+      });
+    }
+    if (title !== undefined) policy.title = (title || '').trim();
+    if (description !== undefined) policy.description = (description || '').trim();
+    if (['green', 'blue', 'purple'].includes(iconColor)) policy.iconColor = iconColor;
+    if (typeof order === 'number') policy.order = order;
+    await policy.save();
+    res.status(200).json({
+      success: true,
+      message: 'Policy updated',
+      data: { policy },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating policy',
+      error: error.message,
+    });
+  }
+};
+
+export const deleteShippingReturnPolicy = async (req, res) => {
+  try {
+    const policy = await ShippingReturnPolicy.findByIdAndDelete(req.params.id);
+    if (!policy) {
+      return res.status(404).json({
+        success: false,
+        message: 'Policy not found',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Policy deleted',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting policy',
       error: error.message,
     });
   }

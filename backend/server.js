@@ -16,6 +16,7 @@ import couponRoutes from './routes/couponRoutes.js';
 import scratchCardRoutes from './routes/scratchCardRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
+import shippingReturnRoutes from './routes/shippingReturnRoutes.js';
 
 dotenv.config();
 
@@ -75,6 +76,10 @@ console.log('✅ Wishlist routes registered at /api/wishlist');
 // Register search routes
 app.use('/api/search', searchRoutes);
 console.log('✅ Search routes registered at /api/search');
+
+// Public shipping & returns policies (product page)
+app.use('/api/shipping-returns', shippingReturnRoutes);
+console.log('✅ Shipping & returns routes registered at /api/shipping-returns');
 
 // Register scratch card routes
 app.use('/api/scratch-card', scratchCardRoutes);

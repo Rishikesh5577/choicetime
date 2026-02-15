@@ -339,6 +339,21 @@ export const adminAPI = {
     apiRequest(`/reels/${id}`, { method: 'DELETE' }),
   toggleReelStatus: async (id) =>
     apiRequest(`/reels/${id}/toggle`, { method: 'PATCH' }),
+
+  // Shipping & Returns (product page policies)
+  getShippingReturns: async () => apiRequest('/admin/shipping-returns'),
+  createShippingReturn: async (payload) =>
+    apiRequest('/admin/shipping-returns', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateShippingReturn: async (id, payload) =>
+    apiRequest(`/admin/shipping-returns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteShippingReturn: async (id) =>
+    apiRequest(`/admin/shipping-returns/${id}`, { method: 'DELETE' }),
 };
 
 // Public Reel API (for home page)
@@ -419,6 +434,11 @@ export const searchAPI = {
     const queryString = new URLSearchParams({ q: query, ...params }).toString();
     return apiRequest(`/search?${queryString}`);
   },
+};
+
+// Shipping & Returns (public - for product page)
+export const shippingReturnAPI = {
+  getPolicies: async () => apiRequest('/shipping-returns'),
 };
 
 // Order Tracking API calls

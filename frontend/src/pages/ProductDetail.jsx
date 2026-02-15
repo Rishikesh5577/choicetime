@@ -6,7 +6,7 @@ import { useWishlist } from '../context/WishlistContext';
 import LoginModal from '../components/LoginModal';
 import ProductCard from '../components/ProductCard';
 import { handleImageError } from '../utils/imageFallback';
-import { productAPI, reviewAPI } from '../utils/api';
+import { productAPI, reviewAPI, shippingReturnAPI } from '../utils/api';
 
 const ProductDetail = () => {
   const { id, category } = useParams();
@@ -56,6 +56,10 @@ const ProductDetail = () => {
     comment: '',
   });
   const [shareCopied, setShareCopied] = useState(false);
+  const [cartSuccessPopup, setCartSuccessPopup] = useState(false);
+
+  const [shippingPolicies, setShippingPolicies] = useState([]);
+  const [loadingShippingPolicies, setLoadingShippingPolicies] = useState(false);
 
   useEffect(() => {
     fetchProduct();
@@ -66,6 +70,23 @@ const ProductDetail = () => {
       fetchReviews(product);
     }
   }, [reviewSort, product]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoadingShippingPolicies(true);
+      try {
+        const res = await shippingReturnAPI.getPolicies();
+        if (res?.success && Array.isArray(res.data?.policies)) {
+          setShippingPolicies(res.data.policies);
+        }
+      } catch (e) {
+        console.error('Shipping policies load failed:', e);
+      } finally {
+        setLoadingShippingPolicies(false);
+      }
+    };
+    load();
+  }, []);
 
   const fetchProduct = async () => {
     setLoading(true);
@@ -612,6 +633,8 @@ const ProductDetail = () => {
     if (!isAuthenticated) return setShowLoginModal(true);
     try {
       await addToCart(product, 1, selectedSize, selectedColor, selectedBoxType, selectedBoxPrice);
+      setCartSuccessPopup(true);
+      setTimeout(() => setCartSuccessPopup(false), 2500);
     } catch (error) {
       if (error.message.includes('login')) setShowLoginModal(true);
     }
@@ -1038,15 +1061,22 @@ const ProductDetail = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-row gap-2">
-                <button
-                  onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-xs sm:text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  <span>Add to Cart</span>
-                </button>
+                <div className="flex-1 relative">
+                  {cartSuccessPopup && (
+                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 bg-green-600 text-white text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
+                      Product added successfully
+                    </span>
+                  )}
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-full flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-xs sm:text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span>Add to Cart</span>
+                  </button>
+                </div>
                 <button
                   onClick={handleBuyNow}
                   className="flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-xs sm:text-sm border border-gray-900"
@@ -1070,28 +1100,6 @@ const ProductDetail = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
                 </button>
-              </div>
-
-              {/* Quick Info Cards */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase">Free Shipping</span>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-gray-500">On orders over ₹1,000</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-2.5 sm:p-3 border border-gray-200">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span className="text-[10px] sm:text-xs font-semibold text-gray-700 uppercase">Easy Returns</span>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-gray-500">30 days return policy</p>
-                </div>
               </div>
 
               {/* Reviews Summary */}
@@ -1269,37 +1277,63 @@ const ProductDetail = () => {
                 );
               })()}
 
-              {/* Delivery & Returns Info */}
+              {/* Delivery & Returns Info (from admin) */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping & Returns</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <div>
-                      <p className="font-medium text-gray-900">Free Shipping</p>
-                      <p className="text-gray-600">On orders over ₹1,000. Standard delivery in 5-7 business days.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <div>
-                      <p className="font-medium text-gray-900">5-Day Returns</p>
-                      <p className="text-gray-600">Easy returns within 30 days of purchase. No questions asked.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    <div>
-                      <p className="font-medium text-gray-900">Secure Payment</p>
-                      <p className="text-gray-600">Your payment information is safe and encrypted.</p>
-                    </div>
-                  </div>
+                  {loadingShippingPolicies ? (
+                    <div className="text-gray-500">Loading...</div>
+                  ) : (shippingPolicies && shippingPolicies.length > 0) ? (
+                    shippingPolicies.map((policy) => {
+                      const iconColorClass = policy.iconColor === 'blue' ? 'text-blue-600' : policy.iconColor === 'purple' ? 'text-purple-600' : 'text-green-600';
+                      const iconPath = policy.iconColor === 'blue'
+                        ? 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
+                        : policy.iconColor === 'purple'
+                        ? 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
+                        : 'M5 13l4 4L19 7';
+                      return (
+                        <div key={policy._id} className="flex items-start gap-3">
+                          <svg className={`w-5 h-5 ${iconColorClass} mt-0.5 flex-shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={iconPath} />
+                          </svg>
+                          <div>
+                            <p className="font-medium text-gray-900">{policy.title}</p>
+                            <p className="text-gray-600">{policy.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="font-medium text-gray-900">Free Shipping</p>
+                          <p className="text-gray-600">On orders over ₹1,000. Standard delivery in 5-7 business days.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <div>
+                          <p className="font-medium text-gray-900">5-Day Returns</p>
+                          <p className="text-gray-600">Easy returns within 30 days of purchase. No questions asked.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <div>
+                          <p className="font-medium text-gray-900">Secure Payment</p>
+                          <p className="text-gray-600">Your payment information is safe and encrypted.</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

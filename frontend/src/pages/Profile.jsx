@@ -32,11 +32,6 @@ const IconMapPin = (props) => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
-const IconCreditCard = (props) => (
-  <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-  </svg>
-);
 const IconBell = (props) => (
   <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17h5l-1.405-1.405A2.007 2.007 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -150,8 +145,7 @@ const Profile = () => {
   const menuItems = [
     { id: 'profile', label: 'General', icon: IconUser, description: 'Personal details & address' },
     { id: 'orders', label: 'Orders', icon: IconShoppingBag, description: 'History & status' },
-    { id: 'payments', label: 'Billing', icon: IconCreditCard, description: 'Cards & payments' },
-    { id: 'security', label: 'Security', icon: IconShieldCheck, description: 'Password & 2FA' },
+    { id: 'security', label: 'Security', icon: IconShieldCheck, description: 'Password' },
     { id: 'notifications', label: 'Notifications', icon: IconBell, description: 'Email & SMS preferences' },
   ];
 
@@ -167,7 +161,10 @@ const Profile = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab) setActiveTab(tab);
+    if (tab) {
+      if (tab === 'payments') setActiveTab('profile');
+      else setActiveTab(tab);
+    }
     if (searchParams.get('payment') === 'success') {
       setSuccess('Payment successful! Your order has been placed.');
       navigate('/profile?tab=orders', { replace: true });
@@ -273,7 +270,7 @@ const Profile = () => {
             <span className="h-6 w-px bg-gray-200"></span>
             <h1 className="text-lg font-semibold tracking-tight">Account Settings</h1>
           </div>
-          <button onClick={logout} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95">
+          <button onClick={() => { logout(); navigate('/'); }} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95">
             <IconLogout className="w-4 h-4" />
             Sign out
           </button>
@@ -451,46 +448,6 @@ const Profile = () => {
                   </div>
                 )}
 
-                {/* --- TAB: PAYMENTS (Credit Card UI) --- */}
-                {activeTab === 'payments' && (
-                  <div className="max-w-2xl">
-                    <h3 className="text-sm font-semibold text-zinc-900 mb-4">Saved Cards</h3>
-
-                    {/* Realistic CSS Credit Card */}
-                    <div className="relative w-80 h-48 bg-gradient-to-br from-zinc-800 to-black rounded-xl shadow-xl overflow-hidden text-white p-6 mb-8 transition-transform transform hover:-translate-y-1">
-                      <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 rounded-full bg-white opacity-5"></div>
-                      <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-40 h-40 rounded-full bg-white opacity-5"></div>
-
-                      <div className="flex justify-between items-start mb-8">
-                        <div className="w-10 h-6 bg-zinc-500/50 rounded flex items-center justify-center">
-                          <div className="w-6 h-4 border border-white/30 rounded-sm"></div>
-                        </div>
-                        <span className="text-xs font-mono opacity-70">DEBIT</span>
-                      </div>
-
-                      <div className="mb-6">
-                        <p className="font-mono text-xl tracking-widest text-shadow">•••• •••• •••• 4242</p>
-                      </div>
-
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-[10px] opacity-70 uppercase tracking-wider mb-1">Card Holder</p>
-                          <p className="font-medium tracking-wide uppercase text-sm">{displayName}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] opacity-70 uppercase tracking-wider mb-1">Expires</p>
-                          <p className="font-medium tracking-wide text-sm">12/28</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-zinc-700 hover:bg-gray-50 transition-all">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                      Add Payment Method
-                    </button>
-                  </div>
-                )}
-
                 {/* --- TAB: SECURITY --- */}
                 {activeTab === 'security' && (
                   <div className="max-w-2xl space-y-6">
@@ -500,16 +457,6 @@ const Profile = () => {
                         <p className="text-xs text-zinc-500 mt-1">Last changed 30 days ago</p>
                       </div>
                       <button className="text-sm font-medium text-zinc-900 hover:underline">Update</button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
-                      <div>
-                        <h4 className="text-sm font-semibold text-zinc-900">Two-Factor Authentication</h4>
-                        <p className="text-xs text-zinc-500 mt-1">Add an extra layer of security</p>
-                      </div>
-                      <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                        <input type="checkbox" className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" />
-                        <label className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
-                      </div>
                     </div>
                   </div>
                 )}

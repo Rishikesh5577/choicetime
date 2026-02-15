@@ -79,6 +79,12 @@ const IconCoupon = (props) => (
   </svg>
 );
 
+const IconShippingReturns = (props) => (
+  <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h10" />
+  </svg>
+);
+
 // Sidebar menu items
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: IconDashboard },
@@ -91,6 +97,7 @@ const menuItems = [
   { id: 'orders', label: 'Manage Orders', icon: IconOrders },
   { id: 'order-status', label: 'Order Status', icon: IconStatus },
   { id: 'coupons', label: 'Coupons', icon: IconCoupon },
+  { id: 'shipping-returns', label: 'Shipping & Returns', icon: IconShippingReturns },
   { id: 'users', label: 'Manage Users', icon: IconUsers },
 ];
 
@@ -188,6 +195,17 @@ const AdminDashboard = () => {
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [successPopup, setSuccessPopup] = useState({ show: false, text: '' });
 
+  // Shipping & Returns (product page policies)
+  const [shippingReturnsPolicies, setShippingReturnsPolicies] = useState([]);
+  const [shippingReturnForm, setShippingReturnForm] = useState({
+    title: '',
+    description: '',
+    iconColor: 'green',
+    order: 0,
+  });
+  const [editingShippingReturn, setEditingShippingReturn] = useState(null);
+  const [loadingShippingReturns, setLoadingShippingReturns] = useState(false);
+
   const showSuccessPopup = (text) => {
     setSuccessPopup({ show: true, text });
     setTimeout(() => setSuccessPopup({ show: false, text: '' }), 2500);
@@ -225,6 +243,9 @@ const AdminDashboard = () => {
     }
     if (activeSection === 'coupons') {
       fetchCoupons();
+    }
+    if (activeSection === 'shipping-returns') {
+      fetchShippingReturns();
     }
   }, [isAdmin, activeSection, productCategory]);
 
@@ -580,6 +601,76 @@ const AdminDashboard = () => {
       if (response.success) fetchCoupons();
     } catch (error) {
       setMessage({ type: 'error', text: error.message || 'Failed to toggle coupon' });
+    }
+  };
+
+  // ========== SHIPPING & RETURNS FUNCTIONS ==========
+  const fetchShippingReturns = async () => {
+    setLoadingShippingReturns(true);
+    try {
+      const response = await adminAPI.getShippingReturns();
+      if (response.success) setShippingReturnsPolicies(response.data?.policies || []);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to load Shipping & Returns' });
+    } finally {
+      setLoadingShippingReturns(false);
+    }
+  };
+
+  const resetShippingReturnForm = () => {
+    setShippingReturnForm({ title: '', description: '', iconColor: 'green', order: shippingReturnsPolicies?.length || 0 });
+    setEditingShippingReturn(null);
+  };
+
+  const handleCreateOrUpdateShippingReturn = async (e) => {
+    e.preventDefault();
+    if (!shippingReturnForm.title?.trim() || !shippingReturnForm.description?.trim()) {
+      setMessage({ type: 'error', text: 'Title and description are required' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        title: shippingReturnForm.title.trim(),
+        description: shippingReturnForm.description.trim(),
+        iconColor: shippingReturnForm.iconColor,
+        order: Number(shippingReturnForm.order) || 0,
+      };
+      if (editingShippingReturn) {
+        await adminAPI.updateShippingReturn(editingShippingReturn._id, payload);
+        setMessage({ type: 'success', text: 'Policy updated!' });
+      } else {
+        await adminAPI.createShippingReturn(payload);
+        setMessage({ type: 'success', text: 'Policy added!' });
+      }
+      resetShippingReturnForm();
+      fetchShippingReturns();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to save' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditShippingReturn = (policy) => {
+    setEditingShippingReturn(policy);
+    setShippingReturnForm({
+      title: policy.title,
+      description: policy.description,
+      iconColor: policy.iconColor || 'green',
+      order: policy.order ?? 0,
+    });
+  };
+
+  const handleDeleteShippingReturn = async (id) => {
+    if (!window.confirm('Delete this policy?')) return;
+    try {
+      await adminAPI.deleteShippingReturn(id);
+      setMessage({ type: 'success', text: 'Policy deleted!' });
+      fetchShippingReturns();
+      if (editingShippingReturn?._id === id) resetShippingReturnForm();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to delete' });
     }
   };
 
@@ -3762,6 +3853,125 @@ const AdminDashboard = () => {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'shipping-returns':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shipping & Returns</h2>
+            <p className="text-sm text-gray-600">Manage the policies shown on the product page (Free Shipping, Returns, Secure Payment, etc.).</p>
+
+            <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {editingShippingReturn ? 'Edit Policy' : 'Add New Policy'}
+              </h3>
+              <form onSubmit={handleCreateOrUpdateShippingReturn} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      value={shippingReturnForm.title}
+                      onChange={(e) => setShippingReturnForm({ ...shippingReturnForm, title: e.target.value })}
+                      placeholder="e.g. Free Shipping"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Icon color</label>
+                    <select
+                      value={shippingReturnForm.iconColor}
+                      onChange={(e) => setShippingReturnForm({ ...shippingReturnForm, iconColor: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="green">Green (check)</option>
+                      <option value="blue">Blue (return)</option>
+                      <option value="purple">Purple (lock)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Description *</label>
+                  <textarea
+                    value={shippingReturnForm.description}
+                    onChange={(e) => setShippingReturnForm({ ...shippingReturnForm, description: e.target.value })}
+                    placeholder="e.g. On orders over ₹1,000. Standard delivery in 5-7 business days."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm min-h-[80px]"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    {loading ? 'Saving...' : editingShippingReturn ? 'Update' : 'Add'}
+                  </button>
+                  {editingShippingReturn && (
+                    <button
+                      type="button"
+                      onClick={resetShippingReturnForm}
+                      className="px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E8E4DD] shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Policies ({(shippingReturnsPolicies || []).length})</h3>
+                <button onClick={fetchShippingReturns} className="text-sm text-gray-600 hover:text-gray-900 font-medium">Refresh</button>
+              </div>
+              {loadingShippingReturns ? (
+                <div className="p-8 text-center text-gray-500">Loading...</div>
+              ) : (shippingReturnsPolicies || []).length === 0 ? (
+                <div className="p-8 text-center text-gray-500">No policies yet. Add one above; they will appear on the product page.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3">Order</th>
+                        <th className="px-4 py-3">Title</th>
+                        <th className="px-4 py-3">Description</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {shippingReturnsPolicies.map((p) => (
+                        <tr key={p._id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-600">{p.order}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{p.title}</td>
+                          <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{p.description}</td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleEditShippingReturn(p)}
+                                className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteShippingReturn(p._id)}
+                                className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded hover:bg-red-100"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

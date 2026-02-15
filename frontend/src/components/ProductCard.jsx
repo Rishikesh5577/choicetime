@@ -17,6 +17,7 @@ const ProductCard = ({ product }) => {
   const [showSizes, setShowSizes] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
+  const [cartSuccessPopup, setCartSuccessPopup] = useState(false);
 
   // Data Normalization - support array, object { image1, image2, ... }, or single image/thumbnail
   let productImages = [];
@@ -94,6 +95,8 @@ const ProductCard = ({ product }) => {
     setIsAdding(true);
     try {
       await addToCart({ ...product, selectedSize });
+      setCartSuccessPopup(true);
+      setTimeout(() => setCartSuccessPopup(false), 2500);
       setTimeout(() => {
         setIsAdding(false);
         setShowSizes(false);
@@ -126,7 +129,11 @@ const ProductCard = ({ product }) => {
   return (
     <>
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
-      
+      {cartSuccessPopup && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-green-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg whitespace-nowrap">
+          Product added successfully
+        </div>
+      )}
       <div 
         className="group relative w-full h-full select-none transform-gpu bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col" 
         onMouseEnter={() => setIsHovered(true)}
