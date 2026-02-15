@@ -18,6 +18,7 @@ import wishlistRoutes from './routes/wishlistRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
 import shippingReturnRoutes from './routes/shippingReturnRoutes.js';
 import returnRoutes from './routes/returnRoutes.js';
+import publicSettingsRoutes from './routes/publicSettingsRoutes.js';
 
 dotenv.config();
 
@@ -84,6 +85,9 @@ console.log('✅ Shipping & returns routes registered at /api/shipping-returns')
 
 app.use('/api/returns', returnRoutes);
 console.log('✅ Return routes registered at /api/returns');
+
+app.use('/api/settings', publicSettingsRoutes);
+console.log('✅ Public settings routes registered at /api/settings');
 
 // Register scratch card routes
 app.use('/api/scratch-card', scratchCardRoutes);

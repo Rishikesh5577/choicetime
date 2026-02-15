@@ -656,4 +656,50 @@ export const updateScratchCardPopupActive = async (req, res) => {
   }
 };
 
+const ORDER_TIMELINE_KEY = 'orderTimeline';
+const DEFAULT_ORDER_TIMELINE = {
+  deliveryDaysMin: 5,
+  deliveryDaysMax: 7,
+  steps: [
+    { label: 'Order confirmed', timeEstimate: 'Just now' },
+    { label: 'Processing', timeEstimate: 'Within 24hrs' },
+    { label: 'Shipped', timeEstimate: '2-3 days' },
+    { label: 'Delivered', timeEstimate: 'On delivery date' },
+  ],
+};
+
+export const getOrderTimeline = async (req, res) => {
+  try {
+    const doc = await Setting.findOne({ key: ORDER_TIMELINE_KEY });
+    const value = doc?.value && typeof doc.value === 'object' ? doc.value : DEFAULT_ORDER_TIMELINE;
+    const merged = {
+      deliveryDaysMin: value.deliveryDaysMin ?? DEFAULT_ORDER_TIMELINE.deliveryDaysMin,
+      deliveryDaysMax: value.deliveryDaysMax ?? DEFAULT_ORDER_TIMELINE.deliveryDaysMax,
+      steps: Array.isArray(value.steps) && value.steps.length > 0 ? value.steps : DEFAULT_ORDER_TIMELINE.steps,
+    };
+    res.status(200).json({ success: true, data: merged });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message, data: DEFAULT_ORDER_TIMELINE });
+  }
+};
+
+export const updateOrderTimeline = async (req, res) => {
+  try {
+    const { deliveryDaysMin, deliveryDaysMax, steps } = req.body;
+    const value = {
+      deliveryDaysMin: typeof deliveryDaysMin === 'number' ? deliveryDaysMin : parseInt(deliveryDaysMin, 10) || 5,
+      deliveryDaysMax: typeof deliveryDaysMax === 'number' ? deliveryDaysMax : parseInt(deliveryDaysMax, 10) || 7,
+      steps: Array.isArray(steps) && steps.length > 0 ? steps : DEFAULT_ORDER_TIMELINE.steps,
+    };
+    await Setting.findOneAndUpdate(
+      { key: ORDER_TIMELINE_KEY },
+      { value, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.status(200).json({ success: true, data: value });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message });
+  }
+};
+
 

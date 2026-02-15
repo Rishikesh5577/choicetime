@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { orderAPI } from '../utils/api';
+import { orderAPI, getOrderTimelineConfig } from '../utils/api';
 import { CheckCircle, Package, Calendar, Receipt, Truck, FileText } from 'lucide-react';
 import Invoice from '../components/Invoice';
 
@@ -16,15 +16,23 @@ const OrderSuccess = () => {
   const [showInvoice, setShowInvoice] = useState(false);
   const [order, setOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
+  const [orderTimelineConfig, setOrderTimelineConfig] = useState(null);
   const paymentMethod = searchParams.get('method') || 'COD';
   const orderId = searchParams.get('orderId') || '';
 
   // Generate order number from orderId or create a random one
   const orderNumber = orderId ? orderId.slice(-8).toUpperCase() : `ORD${Date.now().toString().slice(-8)}`;
 
-  // Calculate estimated delivery date (5-7 days from now)
-  const estimatedDelivery = new Date();
-  estimatedDelivery.setDate(estimatedDelivery.getDate() + Math.floor(Math.random() * 3) + 5); // 5-7 days
+  // Estimated delivery from admin config (deliveryDaysMin–Max from order date)
+  const estimatedDelivery = (() => {
+    const base = order?.orderDate ? new Date(order.orderDate) : new Date();
+    const min = orderTimelineConfig?.deliveryDaysMin ?? 5;
+    const max = orderTimelineConfig?.deliveryDaysMax ?? 7;
+    const days = Math.round((min + max) / 2);
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    return d;
+  })();
 
   // Get order total from localStorage (stored before cart is cleared)
   const [orderTotal, setOrderTotal] = useState(0);
@@ -48,6 +56,15 @@ const OrderSuccess = () => {
       fetchOrder();
     }
   }, [orderId]);
+
+  // Fetch order timeline config (from admin Shipping & Returns)
+  useEffect(() => {
+    getOrderTimelineConfig()
+      .then((res) => {
+        if (res?.success && res?.data) setOrderTimelineConfig(res.data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const storedTotal = localStorage.getItem('lastOrderTotal');
@@ -184,7 +201,11 @@ const OrderSuccess = () => {
                 day: 'numeric'
               })}
             </p>
-            <p className="text-xs text-blue-600 mt-1">5-7 business days</p>
+            <p className="text-xs text-blue-600 mt-1">
+              {orderTimelineConfig?.deliveryDaysMin != null && orderTimelineConfig?.deliveryDaysMax != null
+                ? `${orderTimelineConfig.deliveryDaysMin}-${orderTimelineConfig.deliveryDaysMax} business days`
+                : '5-7 business days'}
+            </p>
           </div>
 
           {/* Payment Method */}
@@ -231,7 +252,7 @@ const OrderSuccess = () => {
           </div>
         )}
 
-        {/* Order Timeline */}
+        {/* Order Timeline — from admin Shipping & Returns */}
         <div
           className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 transform transition-all duration-500"
           style={{
@@ -243,26 +264,25 @@ const OrderSuccess = () => {
             <div className="text-left flex-1">
               <p className="text-sm font-semibold text-gray-900 mb-2">Order Timeline</p>
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">Order confirmed</span>
-                  <span className="text-xs text-gray-400 ml-auto">Just now</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-xs text-gray-500">Processing</span>
-                  <span className="text-xs text-gray-400 ml-auto">Within 24hrs</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-xs text-gray-500">Shipped</span>
-                  <span className="text-xs text-gray-400 ml-auto">2-3 days</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                  <span className="text-xs text-gray-500">Delivered</span>
-                  <span className="text-xs text-gray-400 ml-auto">{estimatedDelivery.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                </div>
+                {(() => {
+                const steps = orderTimelineConfig?.steps?.length ? orderTimelineConfig.steps : [
+                  { label: 'Order confirmed', timeEstimate: 'Just now' },
+                  { label: 'Processing', timeEstimate: 'Within 24hrs' },
+                  { label: 'Shipped', timeEstimate: '2-3 days' },
+                  { label: 'Delivered', timeEstimate: 'On delivery date' },
+                ];
+                return steps.map((step, idx) => {
+                  const isLast = idx === steps.length - 1;
+                  const timeDisplay = isLast ? estimatedDelivery.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : (step.timeEstimate || '');
+                  return (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      <span className={`text-xs ${idx === 0 ? 'text-gray-600' : 'text-gray-500'}`}>{step.label || `Step ${idx + 1}`}</span>
+                      <span className="text-xs text-gray-400 ml-auto">{timeDisplay}</span>
+                    </div>
+                  );
+                });
+              })()}
               </div>
             </div>
           </div>

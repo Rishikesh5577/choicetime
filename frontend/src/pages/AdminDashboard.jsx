@@ -213,6 +213,17 @@ const AdminDashboard = () => {
   });
   const [editingShippingReturn, setEditingShippingReturn] = useState(null);
   const [loadingShippingReturns, setLoadingShippingReturns] = useState(false);
+  const [orderTimeline, setOrderTimeline] = useState({
+    deliveryDaysMin: 5,
+    deliveryDaysMax: 7,
+    steps: [
+      { label: 'Order confirmed', timeEstimate: 'Just now' },
+      { label: 'Processing', timeEstimate: 'Within 24hrs' },
+      { label: 'Shipped', timeEstimate: '2-3 days' },
+      { label: 'Delivered', timeEstimate: 'On delivery date' },
+    ],
+  });
+  const [orderTimelineSaving, setOrderTimelineSaving] = useState(false);
 
   // Return order management
   const [returnRequests, setReturnRequests] = useState([]);
@@ -293,6 +304,7 @@ const AdminDashboard = () => {
     }
     if (activeSection === 'shipping-returns') {
       fetchShippingReturns();
+      fetchOrderTimeline();
     }
     if (activeSection === 'return-orders') {
       fetchReturnRequests();
@@ -715,6 +727,41 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: error.message || 'Failed to load Shipping & Returns' });
     } finally {
       setLoadingShippingReturns(false);
+    }
+  };
+
+  const fetchOrderTimeline = async () => {
+    try {
+      const res = await adminAPI.getOrderTimeline();
+      if (res?.success && res?.data) {
+        const d = res.data;
+        const defaultSteps = [
+          { label: 'Order confirmed', timeEstimate: 'Just now' },
+          { label: 'Processing', timeEstimate: 'Within 24hrs' },
+          { label: 'Shipped', timeEstimate: '2-3 days' },
+          { label: 'Delivered', timeEstimate: 'On delivery date' },
+        ];
+        setOrderTimeline({
+          deliveryDaysMin: d.deliveryDaysMin ?? 5,
+          deliveryDaysMax: d.deliveryDaysMax ?? 7,
+          steps: Array.isArray(d.steps) && d.steps.length ? d.steps : defaultSteps,
+        });
+      }
+    } catch (e) {
+      console.error('Fetch order timeline:', e);
+    }
+  };
+
+  const handleSaveOrderTimeline = async (e) => {
+    e.preventDefault();
+    setOrderTimelineSaving(true);
+    try {
+      await adminAPI.updateOrderTimeline(orderTimeline);
+      showSuccessPopup('Order timeline saved. It will reflect on the Order Success page.');
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to save order timeline' });
+    } finally {
+      setOrderTimelineSaving(false);
     }
   };
 
@@ -4192,6 +4239,74 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shipping & Returns</h2>
             <p className="text-sm text-gray-600">Manage the policies shown on the product page (Free Shipping, Returns, Secure Payment, etc.).</p>
+
+            {/* Order Timeline — shown on Order Success page */}
+            <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Order Timeline (Order Success page)</h3>
+              <p className="text-sm text-gray-600 mb-4">Set the stages and delivery estimate shown after a customer places an order.</p>
+              <form onSubmit={handleSaveOrderTimeline} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Delivery estimate — Min days</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={orderTimeline.deliveryDaysMin}
+                      onChange={(e) => setOrderTimeline((o) => ({ ...o, deliveryDaysMin: parseInt(e.target.value, 10) || 1 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Delivery estimate — Max days</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={orderTimeline.deliveryDaysMax}
+                      onChange={(e) => setOrderTimeline((o) => ({ ...o, deliveryDaysMax: parseInt(e.target.value, 10) || 1 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Timeline steps (label + time estimate)</label>
+                  <div className="space-y-2">
+                    {(orderTimeline.steps || []).map((step, idx) => (
+                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={step.label || ''}
+                          onChange={(e) => {
+                            const steps = [...(orderTimeline.steps || [])];
+                            steps[idx] = { ...steps[idx], label: e.target.value };
+                            setOrderTimeline((o) => ({ ...o, steps }));
+                          }}
+                          placeholder="e.g. Order confirmed"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={step.timeEstimate || ''}
+                          onChange={(e) => {
+                            const steps = [...(orderTimeline.steps || [])];
+                            steps[idx] = { ...steps[idx], timeEstimate: e.target.value };
+                            setOrderTimeline((o) => ({ ...o, steps }));
+                          }}
+                          placeholder="e.g. Just now / Within 24hrs"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={orderTimelineSaving}
+                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {orderTimelineSaving ? 'Saving...' : 'Save Order Timeline'}
+                </button>
+              </form>
+            </div>
 
             <div className="bg-white rounded-2xl border border-[#E8E4DD] p-4 sm:p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">

@@ -368,6 +368,12 @@ export const adminAPI = {
       method: 'PATCH',
       body: JSON.stringify({ active }),
     }),
+  getOrderTimeline: async () => apiRequest('/admin/settings/order-timeline'),
+  updateOrderTimeline: async (payload) =>
+    apiRequest('/admin/settings/order-timeline', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   updateReturnStatus: async (id, payload) =>
     apiRequest(`/admin/returns/${id}`, {
       method: 'PATCH',
@@ -460,6 +466,9 @@ export const searchAPI = {
 export const shippingReturnAPI = {
   getPolicies: async () => apiRequest('/shipping-returns'),
 };
+
+// Order timeline config (public - for Order Success page)
+export const getOrderTimelineConfig = async () => apiRequest('/settings/order-timeline');
 
 // Return requests (user)
 export const returnsAPI = {

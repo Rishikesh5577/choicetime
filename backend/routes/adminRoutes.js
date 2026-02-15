@@ -24,6 +24,8 @@ import {
   updateReturnStatus,
   getScratchCardPopupActive,
   updateScratchCardPopupActive,
+  getOrderTimeline,
+  updateOrderTimeline,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -58,6 +60,8 @@ router.patch('/returns/:id', updateReturnStatus);
 
 router.get('/settings/scratch-card-popup', getScratchCardPopupActive);
 router.patch('/settings/scratch-card-popup', updateScratchCardPopupActive);
+router.get('/settings/order-timeline', getOrderTimeline);
+router.patch('/settings/order-timeline', updateOrderTimeline);
 
 export default router;
 
