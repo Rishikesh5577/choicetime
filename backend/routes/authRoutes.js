@@ -38,12 +38,24 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // Create user
+    // Normalize phone to 10 digits for consistent login-by-phone
+    let phoneNormalized = '';
+    if (phone && typeof phone === 'string') {
+      const digits = phone.replace(/\D/g, '');
+      phoneNormalized = digits.length === 12 && digits.startsWith('91')
+        ? digits.slice(2)
+        : digits.length === 11 && digits.startsWith('0')
+          ? digits.slice(1)
+          : digits.length === 10
+            ? digits
+            : phone.trim();
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password,
-      phone: phone || '',
+      phone: phoneNormalized,
     });
 
     // Generate token
@@ -156,27 +168,47 @@ router.post('/google', async (req, res) => {
 });
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user (by email or phone + password)
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const emailOrPhone = (email || '').toString().trim();
 
-    // Validation
-    if (!email || !password) {
+    if (!emailOrPhone || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email and password',
+        message: 'Please provide email/phone and password',
       });
     }
 
-    // Find user and include password
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    let user = null;
+    if (emailOrPhone.includes('@')) {
+      user = await User.findOne({ email: emailOrPhone.toLowerCase() }).select('+password');
+    } else {
+      const cleanPhone = emailOrPhone.replace(/\D/g, '');
+      const phone10 = cleanPhone.length === 12 && cleanPhone.startsWith('91')
+        ? cleanPhone.slice(2)
+        : cleanPhone.length === 11 && cleanPhone.startsWith('0')
+          ? cleanPhone.slice(1)
+          : cleanPhone.length === 10
+            ? cleanPhone
+            : null;
+      if (phone10 && phone10.length === 10) {
+        user = await User.findOne({
+          $or: [
+            { phone: phone10 },
+            { phone: '0' + phone10 },
+            { phone: '91' + phone10 },
+          ],
+        }).select('+password');
+      }
+    }
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Invalid email/phone or password',
       });
     }
 

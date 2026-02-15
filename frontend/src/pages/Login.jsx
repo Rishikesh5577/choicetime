@@ -100,22 +100,22 @@ const Login = () => {
 
                 <div className="space-y-3">
                   <div className="relative">
-                    <label htmlFor="email" className="sr-only">Email address</label>
+                    <label htmlFor="email" className="sr-only">Email or phone number</label>
                     <LeftIcon>
                       <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </LeftIcon>
                     <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Email address"
+id="email"
+                  name="email"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={inputClass}
+                  placeholder="Email or phone number"
                     />
                   </div>
 
