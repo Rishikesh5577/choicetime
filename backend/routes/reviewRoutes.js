@@ -20,12 +20,14 @@ router.get('/health', (req, res) => {
 router.post('/', protect, async (req, res) => {
   try {
     const { productId, productCategory, rating, title, comment, images } = req.body;
+    const trimmedComment = String(comment || '').trim();
+    const normalizedTitle = String(title || '').trim() || trimmedComment.slice(0, 80) || 'Review';
 
     // Validation
-    if (!productId || !productCategory || !rating || !title || !comment) {
+    if (!productId || !productCategory || !rating || !trimmedComment) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide productId, productCategory, rating, title, and comment',
+        message: 'Please provide productId, productCategory, rating, and comment',
       });
     }
 
@@ -57,8 +59,8 @@ router.post('/', protect, async (req, res) => {
       userName: req.user.name || 'Anonymous',
       userEmail: req.user.email,
       rating: parseInt(rating),
-      title: title.trim(),
-      comment: comment.trim(),
+      title: normalizedTitle,
+      comment: trimmedComment,
       images: images || [],
       status: 'approved', // Auto-approve for now, can be changed to 'pending' for moderation
     });

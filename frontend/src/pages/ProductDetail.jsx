@@ -34,7 +34,6 @@ const ProductDetail = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     rating: 0,
-    title: '',
     comment: '',
   });
   const [shareCopied, setShareCopied] = useState(false);
@@ -244,8 +243,8 @@ const ProductDetail = () => {
       return;
     }
 
-    if (!reviewForm.rating || !reviewForm.title.trim() || !reviewForm.comment.trim()) {
-      alert('Please fill in all fields and select a rating');
+    if (!reviewForm.rating || !reviewForm.comment.trim()) {
+      alert('Please select a rating and write your review');
       return;
     }
 
@@ -258,13 +257,12 @@ const ProductDetail = () => {
         productId,
         productCategory,
         rating: reviewForm.rating,
-        title: reviewForm.title.trim(),
         comment: reviewForm.comment.trim(),
       });
 
       if (response.success) {
         // Reset form
-        setReviewForm({ rating: 0, title: '', comment: '' });
+        setReviewForm({ rating: 0, comment: '' });
         setShowReviewForm(false);
         // Refresh reviews
         await fetchReviews(product);
@@ -1093,22 +1091,6 @@ const ProductDetail = () => {
                     </div>
                   </div>
 
-                  {/* Review Title */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Review Title *
-                    </label>
-                    <input
-                      type="text"
-                      value={reviewForm.title}
-                      onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
-                      placeholder="Give your review a title"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent text-sm"
-                      maxLength={200}
-                      required
-                    />
-                  </div>
-
                   {/* Review Comment */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1141,7 +1123,7 @@ const ProductDetail = () => {
                       type="button"
                       onClick={() => {
                         setShowReviewForm(false);
-                        setReviewForm({ rating: 0, title: '', comment: '' });
+                        setReviewForm({ rating: 0, comment: '' });
                       }}
                       className="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-white text-gray-700 text-sm sm:text-base font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-all active:scale-95"
                     >
