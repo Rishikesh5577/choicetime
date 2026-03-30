@@ -766,9 +766,15 @@ export const getShippingConfig = async (req, res) => {
   try {
     const doc = await Setting.findOne({ key: SHIPPING_CONFIG_KEY });
     const value = doc?.value && typeof doc.value === 'object' ? doc.value : DEFAULT_SHIPPING_CONFIG;
+    const parsedThreshold = Number(value.freeShippingThreshold);
+    const parsedShippingCharge = Number(value.shippingCharge);
     const merged = {
-      freeShippingThreshold: Number(value.freeShippingThreshold ?? DEFAULT_SHIPPING_CONFIG.freeShippingThreshold) || DEFAULT_SHIPPING_CONFIG.freeShippingThreshold,
-      shippingCharge: Number(value.shippingCharge ?? DEFAULT_SHIPPING_CONFIG.shippingCharge) || DEFAULT_SHIPPING_CONFIG.shippingCharge,
+      freeShippingThreshold: Number.isFinite(parsedThreshold)
+        ? Math.max(0, parsedThreshold)
+        : DEFAULT_SHIPPING_CONFIG.freeShippingThreshold,
+      shippingCharge: Number.isFinite(parsedShippingCharge)
+        ? Math.max(0, parsedShippingCharge)
+        : DEFAULT_SHIPPING_CONFIG.shippingCharge,
     };
     res.status(200).json({ success: true, data: merged });
   } catch (err) {
