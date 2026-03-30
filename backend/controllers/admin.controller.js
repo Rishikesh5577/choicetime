@@ -712,6 +712,7 @@ export const updateScratchCardPopupActive = async (req, res) => {
 };
 
 const ORDER_TIMELINE_KEY = 'orderTimeline';
+const SHIPPING_CONFIG_KEY = 'shippingConfig';
 const DEFAULT_ORDER_TIMELINE = {
   deliveryDaysMin: 5,
   deliveryDaysMax: 7,
@@ -721,6 +722,10 @@ const DEFAULT_ORDER_TIMELINE = {
     { label: 'Shipped', timeEstimate: '2-3 days' },
     { label: 'Delivered', timeEstimate: 'On delivery date' },
   ],
+};
+const DEFAULT_SHIPPING_CONFIG = {
+  freeShippingThreshold: 2000,
+  shippingCharge: 50,
 };
 
 export const getOrderTimeline = async (req, res) => {
@@ -748,6 +753,38 @@ export const updateOrderTimeline = async (req, res) => {
     };
     await Setting.findOneAndUpdate(
       { key: ORDER_TIMELINE_KEY },
+      { value, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.status(200).json({ success: true, data: value });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message });
+  }
+};
+
+export const getShippingConfig = async (req, res) => {
+  try {
+    const doc = await Setting.findOne({ key: SHIPPING_CONFIG_KEY });
+    const value = doc?.value && typeof doc.value === 'object' ? doc.value : DEFAULT_SHIPPING_CONFIG;
+    const merged = {
+      freeShippingThreshold: Number(value.freeShippingThreshold ?? DEFAULT_SHIPPING_CONFIG.freeShippingThreshold) || DEFAULT_SHIPPING_CONFIG.freeShippingThreshold,
+      shippingCharge: Number(value.shippingCharge ?? DEFAULT_SHIPPING_CONFIG.shippingCharge) || DEFAULT_SHIPPING_CONFIG.shippingCharge,
+    };
+    res.status(200).json({ success: true, data: merged });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err?.message, data: DEFAULT_SHIPPING_CONFIG });
+  }
+};
+
+export const updateShippingConfig = async (req, res) => {
+  try {
+    const { freeShippingThreshold, shippingCharge } = req.body;
+    const value = {
+      freeShippingThreshold: Math.max(0, Number(freeShippingThreshold) || DEFAULT_SHIPPING_CONFIG.freeShippingThreshold),
+      shippingCharge: Math.max(0, Number(shippingCharge) || 0),
+    };
+    await Setting.findOneAndUpdate(
+      { key: SHIPPING_CONFIG_KEY },
       { value, updatedAt: new Date() },
       { upsert: true, new: true }
     );

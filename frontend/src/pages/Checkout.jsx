@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { paymentAPI, profileAPI, orderAPI } from '../utils/api';
+import { paymentAPI, profileAPI, orderAPI, getShippingConfig as getShippingConfigAPI } from '../utils/api';
 import { loadScript } from '../utils/razorpay';
 import { Check, Package, FileText } from 'lucide-react';
 import Invoice from '../components/Invoice';
@@ -31,8 +31,12 @@ const Checkout = () => {
     } catch { return null; }
   });
   const couponDiscount = appliedCoupon?.discount || 0;
-  const freeShippingThreshold = 2000;
-  const shippingCharge = 50;
+  const [shippingConfig, setShippingConfig] = useState({
+    freeShippingThreshold: 2000,
+    shippingCharge: 50,
+  });
+  const freeShippingThreshold = Number(shippingConfig.freeShippingThreshold) || 2000;
+  const shippingCharge = Number(shippingConfig.shippingCharge) || 0;
   const subtotal = getCartTotal();
   const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
   const shippingAmount = discountedSubtotal > freeShippingThreshold ? 0 : shippingCharge;
@@ -83,6 +87,20 @@ const Checkout = () => {
     };
 
     loadUserProfile();
+    const loadShippingConfig = async () => {
+      try {
+        const res = await getShippingConfigAPI();
+        if (res?.success && res?.data) {
+          setShippingConfig({
+            freeShippingThreshold: Number(res.data.freeShippingThreshold ?? 2000) || 2000,
+            shippingCharge: Number(res.data.shippingCharge ?? 50) || 0,
+          });
+        }
+      } catch (e) {
+        console.error('Error loading shipping config:', e);
+      }
+    };
+    loadShippingConfig();
   }, [isAuthenticated, cart.length, navigate, isPlacingOrder]);
 
   const handleInputChange = (e) => {

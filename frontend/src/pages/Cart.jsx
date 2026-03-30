@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { couponAPI } from '../utils/api';
+import { couponAPI, getShippingConfig as getShippingConfigAPI } from '../utils/api';
 import { handleImageError } from '../utils/imageFallback';
 
 // --- Premium Icons ---
@@ -52,16 +52,37 @@ const Cart = () => {
   const [showCouponList, setShowCouponList] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [shippingConfig, setShippingConfig] = useState({
+    freeShippingThreshold: 2000,
+    shippingCharge: 50,
+  });
 
   // Shipping rule: free above threshold, else fixed charge
   const cartTotal = getCartTotal();
-  const freeShippingThreshold = 2000;
-  const shippingCharge = 50;
+  const freeShippingThreshold = Number(shippingConfig.freeShippingThreshold) || 2000;
+  const shippingCharge = Number(shippingConfig.shippingCharge) || 0;
   const discountedSubtotal = Math.max(0, cartTotal - couponDiscount);
   const shippingAmount = discountedSubtotal > freeShippingThreshold ? 0 : shippingCharge;
   const finalTotal = discountedSubtotal + shippingAmount;
   const progress = Math.min((cartTotal / freeShippingThreshold) * 100, 100);
   const remainingForFreeShip = freeShippingThreshold - cartTotal;
+
+  useEffect(() => {
+    const loadShippingConfig = async () => {
+      try {
+        const res = await getShippingConfigAPI();
+        if (res?.success && res?.data) {
+          setShippingConfig({
+            freeShippingThreshold: Number(res.data.freeShippingThreshold ?? 2000) || 2000,
+            shippingCharge: Number(res.data.shippingCharge ?? 50) || 0,
+          });
+        }
+      } catch (e) {
+        console.error('Error loading shipping config:', e);
+      }
+    };
+    loadShippingConfig();
+  }, []);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;

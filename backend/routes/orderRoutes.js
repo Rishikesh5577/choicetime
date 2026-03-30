@@ -2,11 +2,28 @@ import express from 'express';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Coupon from '../models/Coupon.js';
+import Setting from '../models/Setting.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
-const FREE_SHIPPING_THRESHOLD = 2000;
-const SHIPPING_CHARGE = 50;
+const SHIPPING_CONFIG_KEY = 'shippingConfig';
+const DEFAULT_SHIPPING_CONFIG = {
+  freeShippingThreshold: 2000,
+  shippingCharge: 50,
+};
+
+const getShippingConfig = async () => {
+  try {
+    const doc = await Setting.findOne({ key: SHIPPING_CONFIG_KEY }).lean();
+    const value = doc?.value && typeof doc.value === 'object' ? doc.value : DEFAULT_SHIPPING_CONFIG;
+    return {
+      freeShippingThreshold: Math.max(0, Number(value.freeShippingThreshold ?? DEFAULT_SHIPPING_CONFIG.freeShippingThreshold) || DEFAULT_SHIPPING_CONFIG.freeShippingThreshold),
+      shippingCharge: Math.max(0, Number(value.shippingCharge ?? DEFAULT_SHIPPING_CONFIG.shippingCharge) || 0),
+    };
+  } catch {
+    return DEFAULT_SHIPPING_CONFIG;
+  }
+};
 
 // Get user's orders
 router.get('/', protect, async (req, res) => {
@@ -151,8 +168,9 @@ router.post('/create', protect, async (req, res) => {
       }
     }
 
+    const { freeShippingThreshold, shippingCharge } = await getShippingConfig();
     const amountAfterDiscount = subtotal - couponDiscount;
-    const shippingAmount = amountAfterDiscount > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
+    const shippingAmount = amountAfterDiscount > freeShippingThreshold ? 0 : shippingCharge;
     const totalAmount = amountAfterDiscount + shippingAmount;
 
     // Create order

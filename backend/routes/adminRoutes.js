@@ -28,6 +28,8 @@ import {
   updateScratchCardPopupActive,
   getOrderTimeline,
   updateOrderTimeline,
+  getShippingConfig,
+  updateShippingConfig,
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -66,6 +68,8 @@ router.get('/settings/scratch-card-popup', getScratchCardPopupActive);
 router.patch('/settings/scratch-card-popup', updateScratchCardPopupActive);
 router.get('/settings/order-timeline', getOrderTimeline);
 router.patch('/settings/order-timeline', updateOrderTimeline);
+router.get('/settings/shipping', getShippingConfig);
+router.patch('/settings/shipping', updateShippingConfig);
 
 export default router;
 

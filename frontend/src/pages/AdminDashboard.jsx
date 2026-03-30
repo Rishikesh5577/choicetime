@@ -229,6 +229,11 @@ const AdminDashboard = () => {
     ],
   });
   const [orderTimelineSaving, setOrderTimelineSaving] = useState(false);
+  const [shippingConfig, setShippingConfig] = useState({
+    freeShippingThreshold: 2000,
+    shippingCharge: 50,
+  });
+  const [shippingConfigSaving, setShippingConfigSaving] = useState(false);
 
   // Return order management
   const [returnRequests, setReturnRequests] = useState([]);
@@ -314,6 +319,7 @@ const AdminDashboard = () => {
     if (activeSection === 'shipping-returns') {
       fetchShippingReturns();
       fetchOrderTimeline();
+      fetchShippingConfig();
     }
     if (activeSection === 'return-orders') {
       fetchReturnRequests();
@@ -822,6 +828,20 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchShippingConfig = async () => {
+    try {
+      const res = await adminAPI.getShippingConfig();
+      if (res?.success && res?.data) {
+        setShippingConfig({
+          freeShippingThreshold: Number(res.data.freeShippingThreshold ?? 2000) || 2000,
+          shippingCharge: Number(res.data.shippingCharge ?? 50) || 0,
+        });
+      }
+    } catch (e) {
+      console.error('Fetch shipping config:', e);
+    }
+  };
+
   const handleSaveOrderTimeline = async (e) => {
     e.preventDefault();
     setOrderTimelineSaving(true);
@@ -832,6 +852,22 @@ const AdminDashboard = () => {
       setMessage({ type: 'error', text: err?.message || 'Failed to save order timeline' });
     } finally {
       setOrderTimelineSaving(false);
+    }
+  };
+
+  const handleSaveShippingConfig = async (e) => {
+    e.preventDefault();
+    setShippingConfigSaving(true);
+    try {
+      await adminAPI.updateShippingConfig({
+        freeShippingThreshold: Number(shippingConfig.freeShippingThreshold) || 0,
+        shippingCharge: Number(shippingConfig.shippingCharge) || 0,
+      });
+      showSuccessPopup('Shipping settings saved. Cart and checkout will use new values.');
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Failed to save shipping settings' });
+    } finally {
+      setShippingConfigSaving(false);
     }
   };
 
@@ -4503,6 +4539,43 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shipping & Returns</h2>
             <p className="text-sm text-gray-600">Manage the policies shown on the product page (Free Shipping, Returns, Secure Payment, etc.).</p>
+
+            {/* Checkout Shipping Charges */}
+            <div className="bg-white rounded-2xl border border-brown-200 p-4 sm:p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Checkout Shipping Charges</h3>
+              <p className="text-sm text-gray-600 mb-4">Set rule for cart/checkout: free shipping above threshold, otherwise fixed charge.</p>
+              <form onSubmit={handleSaveShippingConfig} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Free shipping above (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={shippingConfig.freeShippingThreshold}
+                      onChange={(e) => setShippingConfig((prev) => ({ ...prev, freeShippingThreshold: Number(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Shipping charge (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={shippingConfig.shippingCharge}
+                      onChange={(e) => setShippingConfig((prev) => ({ ...prev, shippingCharge: Number(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={shippingConfigSaving}
+                  className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {shippingConfigSaving ? 'Saving...' : 'Save Shipping Settings'}
+                </button>
+              </form>
+            </div>
 
             {/* Order Timeline — shown on Order Success page */}
             <div className="bg-white rounded-2xl border border-brown-200 p-4 sm:p-6 shadow-sm">
