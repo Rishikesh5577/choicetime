@@ -5,10 +5,10 @@ export const CLOUDINARY_CONFIG = {
 };
 
 /** Reject originals over this before client-side work (admin product images). */
-export const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_PRODUCT_IMAGE_BYTES = 1.5 * 1024 * 1024;
 
 /** Aim to keep uploads under this after compress (faster product pages). */
-const TARGET_MAX_BYTES = 2 * 1024 * 1024;
+const TARGET_MAX_BYTES = MAX_PRODUCT_IMAGE_BYTES;
 
 const INITIAL_MAX_SIDE = 1920;
 const MIN_MAX_SIDE = 720;
