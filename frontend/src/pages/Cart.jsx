@@ -53,10 +53,13 @@ const Cart = () => {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
 
-  // Simulated Free Shipping Threshold logic
+  // Shipping rule: free above threshold, else fixed charge
   const cartTotal = getCartTotal();
-  const finalTotal = cartTotal - couponDiscount;
-  const freeShippingThreshold = 1000;
+  const freeShippingThreshold = 2000;
+  const shippingCharge = 50;
+  const discountedSubtotal = Math.max(0, cartTotal - couponDiscount);
+  const shippingAmount = discountedSubtotal > freeShippingThreshold ? 0 : shippingCharge;
+  const finalTotal = discountedSubtotal + shippingAmount;
   const progress = Math.min((cartTotal / freeShippingThreshold) * 100, 100);
   const remainingForFreeShip = freeShippingThreshold - cartTotal;
 
@@ -355,15 +358,10 @@ const Cart = () => {
                     {remainingForFreeShip <= 0 && <IconCheck className="w-3.5 h-3.5 text-green-600 ml-1.5" />}
                   </dt>
                   <dd className={`font-medium ${remainingForFreeShip <= 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                    {remainingForFreeShip <= 0 ? 'Free' : 'Calculated at checkout'}
+                    {shippingAmount === 0 ? 'Free' : `₹${shippingAmount.toLocaleString()}`}
                   </dd>
                 </div>
-                <div className="flex justify-between pb-4 border-b border-gray-200">
-                  <dt className="text-gray-600">Tax Estimate</dt>
-                  <dd className="font-medium text-gray-900">₹0.00</dd>
-                </div>
-
-                <div className="flex justify-between items-center pt-3">
+                <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                   <dt className="text-base font-semibold text-gray-900">Total</dt>
                   <dd className="text-xl font-semibold text-gray-900">₹{finalTotal.toLocaleString()}</dd>
                 </div>
@@ -504,7 +502,7 @@ const Cart = () => {
                   Proceed to Checkout
                 </button>
                 <p className="mt-3 text-center text-xs text-gray-500">
-                  Free shipping on orders over ₹1,000
+                  Free shipping on orders over ₹2,000
                 </p>
               </div>
 

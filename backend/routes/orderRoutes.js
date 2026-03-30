@@ -5,6 +5,8 @@ import Coupon from '../models/Coupon.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+const FREE_SHIPPING_THRESHOLD = 2000;
+const SHIPPING_CHARGE = 50;
 
 // Get user's orders
 router.get('/', protect, async (req, res) => {
@@ -149,7 +151,9 @@ router.post('/create', protect, async (req, res) => {
       }
     }
 
-    const totalAmount = subtotal - couponDiscount;
+    const amountAfterDiscount = subtotal - couponDiscount;
+    const shippingAmount = amountAfterDiscount > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
+    const totalAmount = amountAfterDiscount + shippingAmount;
 
     // Create order
     const order = await Order.create({

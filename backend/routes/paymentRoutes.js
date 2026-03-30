@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const router = express.Router();
+const FREE_SHIPPING_THRESHOLD = 2000;
+const SHIPPING_CHARGE = 50;
 
 // Test route to verify payment routes are working
 router.get('/test', (req, res) => {
@@ -52,10 +54,13 @@ router.post('/create-order', protect, async (req, res) => {
     }
 
     // Calculate total amount (in paise for Razorpay)
-    const totalAmount = cart.items.reduce((total, item) => {
+    const subtotal = cart.items.reduce((total, item) => {
       const itemPrice = item.product?.price || item.product?.finalPrice || item.price || 0;
-      return total + itemPrice * item.quantity;
+      const boxPrice = Number(item.boxPrice) || 0;
+      return total + (itemPrice + boxPrice) * item.quantity;
     }, 0);
+    const shippingAmount = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
+    const totalAmount = subtotal + shippingAmount;
 
     const amountInPaise = Math.round(totalAmount * 100); // Convert to paise
 

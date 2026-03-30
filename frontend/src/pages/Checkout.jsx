@@ -31,6 +31,12 @@ const Checkout = () => {
     } catch { return null; }
   });
   const couponDiscount = appliedCoupon?.discount || 0;
+  const freeShippingThreshold = 2000;
+  const shippingCharge = 50;
+  const subtotal = getCartTotal();
+  const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
+  const shippingAmount = discountedSubtotal > freeShippingThreshold ? 0 : shippingCharge;
+  const finalPayable = discountedSubtotal + shippingAmount;
   const [shippingAddress, setShippingAddress] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -203,7 +209,7 @@ const Checkout = () => {
           // Clear cart after showing modal to prevent redirect
           clearCart();
           // Store order total in localStorage for success page
-          const orderTotal = getCartTotal() - couponDiscount;
+          const orderTotal = finalPayable;
           localStorage.setItem('lastOrderTotal', orderTotal.toString());
 
           // Navigate to success page after showing the modal with smooth transition
@@ -764,7 +770,7 @@ const Checkout = () => {
               <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 space-y-2.5">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium text-gray-900">₹{getCartTotal().toLocaleString()}</span>
+                  <span className="font-medium text-gray-900">₹{subtotal.toLocaleString()}</span>
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-sm">
@@ -779,14 +785,19 @@ const Checkout = () => {
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium text-green-600">Free</span>
+                  <span className={`font-medium ${shippingAmount === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                    {shippingAmount === 0 ? 'Free' : `₹${shippingAmount.toLocaleString()}`}
+                  </span>
                 </div>
                 <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
                   <span className="text-base font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-semibold text-gray-900">₹{(getCartTotal() - couponDiscount).toLocaleString()}</span>
+                  <span className="text-lg font-semibold text-gray-900">₹{finalPayable.toLocaleString()}</span>
                 </div>
                 {couponDiscount > 0 && (
                   <p className="text-xs text-green-600 font-medium">You save ₹{couponDiscount.toLocaleString()}!</p>
+                )}
+                {shippingAmount > 0 && (
+                  <p className="text-xs text-gray-500">Free shipping above ₹{freeShippingThreshold.toLocaleString()}</p>
                 )}
               </div>
 
