@@ -5,8 +5,8 @@ const getApiBaseUrl = () => {
     // If env var is set, ensure it ends with /api
     return envUrl.endsWith('/api') ? envUrl : `${envUrl.replace(/\/$/, '')}/api`;
   }
-  // Default to port 5008 (or 5000 if backend is on 5000)
-  return 'http://localhost:5008/api';
+  // Default to production API
+  return 'https://api.choicetime.in/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
